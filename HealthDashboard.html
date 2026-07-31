@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Aile Kan Tahlili Paneli</title>
+<style>
+  :root {
+    --surface-0: #f7f6f3; --surface-1: #ffffff; --surface-2: #ffffff;
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #898781;
+    --border: rgba(11,11,11,0.10); --border-strong: rgba(11,11,11,0.20);
+    --bg-danger: #fcebeb; --text-danger: #791f1f;
+    --bg-accent: #e6f1fb; --text-accent: #0c447c; --border-accent: #378add;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-0: #17171a; --surface-1: #1f1f22; --surface-2: #222225;
+      --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
+      --border: rgba(255,255,255,0.10); --border-strong: rgba(255,255,255,0.20);
+      --bg-danger: #4a1b0c; --text-danger: #f7c1c1;
+      --bg-accent: #042c53; --text-accent: #85b7eb; --border-accent: #185fa5;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--surface-0); color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 15px; line-height: 1.5;
+  }
+  button, select { font-family: inherit; }
+  #page { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
+
+  header { flex: 0 0 auto; padding: 0.9rem 1.25rem 0.75rem; border-bottom: 0.5px solid var(--border); }
+  .title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 18px; font-weight: 600; margin: 0; }
+  .sub { color: var(--text-secondary); font-size: 12.5px; margin: 2px 0 0; }
+
+  select#personSelect {
+    font-size: 14px; font-weight: 500; border-radius: var(--radius);
+    border: 0.5px solid var(--border-strong); background: var(--surface-1);
+    color: var(--text-primary); padding: 7px 12px; cursor: pointer;
+  }
+
+  .stats-cards {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 0.75rem;
+  }
+  .stat-card {
+    background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--radius);
+    padding: 8px 10px;
+  }
+  .stat-card p:first-child { font-size: 11.5px; color: var(--text-secondary); margin: 0 0 2px; }
+  .stat-card p:last-child { font-size: 18px; font-weight: 600; margin: 0; }
+  .stat-card.danger p:last-child { color: var(--text-danger); }
+  .stats-line { display: none; font-size: 12.5px; color: var(--text-secondary); margin-top: 6px; }
+
+  .layout { flex: 1; min-height: 0; display: flex; flex-direction: row; }
+
+  .chart-panel {
+    flex: 1.35; min-width: 0; display: flex; flex-direction: column;
+    padding: 1rem 1.1rem; gap: 8px; border-right: 0.5px solid var(--border);
+  }
+  .metric-title { font-size: 15px; font-weight: 600; margin: 0; }
+  .metric-sub { font-size: 12px; color: var(--text-secondary); margin: 0; }
+  .chart-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 2px; }
+  .chart-item { flex: 0 0 auto; background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 0.7rem 0.85rem; }
+  .chart-item.primary { border-color: var(--border-accent); }
+  .chart-item-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .chart-item-head .info-btn { flex: 0 0 auto; }
+  .chart-item-title { font-size: 13px; font-weight: 600; margin: 0; }
+  .chart-item-title .related-dot { color: #e69e2b; margin-left: 4px; }
+  .chart-item-canvas-wrap { position: relative; height: 190px; }
+  .chart-item.primary .chart-item-canvas-wrap { height: 320px; }
+
+  .related-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  }
+  .related-grid .chart-item { padding: 0.55rem 0.65rem; }
+  .related-grid .chart-item-title { font-size: 11.5px; }
+  .related-grid .chart-item-canvas-wrap { height: 130px; }
+  .related-grid .chart-item-caption { font-size: 10px; }
+  .related-grid .chart-item-note { font-size: 9.5px; }
+  .chart-item-caption { font-size: 11.5px; color: var(--text-secondary); margin: 4px 0 0; }
+  .chart-item-note { font-size: 11px; color: var(--text-accent); margin: 2px 0 0; }
+
+  .list-panel { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+  .tabs { flex: 0 0 auto; display: flex; gap: 6px; flex-wrap: wrap; padding: 0.85rem 1.1rem 0.6rem; }
+  .tabs button {
+    font-size: 12.5px; border-radius: 999px; border: 0.5px solid var(--border-strong);
+    background: var(--surface-1); color: var(--text-primary); padding: 5px 11px; cursor: pointer;
+  }
+  .tabs button.active { background: var(--bg-accent); color: var(--text-accent); border-color: var(--border-accent); }
+
+  .list-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 0 1.1rem 1.25rem; -webkit-overflow-scrolling: touch; }
+  .cat-heading { font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-muted); margin: 14px 0 6px; }
+  .cat-heading:first-child { margin-top: 0; }
+  .row {
+    display: flex; align-items: center; justify-content: flex-start; gap: 10px;
+    padding: 8px 9px; border-radius: 8px; cursor: pointer; border: 0.5px solid transparent;
+  }
+  .row > .name-wrap { flex: 1; min-width: 0; }
+  .row:hover { background: var(--surface-1); }
+  .row.active { background: var(--bg-accent); border-color: var(--border-accent); }
+  .row.related { background: rgba(230, 158, 43, 0.10); border-color: rgba(230, 158, 43, 0.45); }
+  .row.related .name::after {
+    content: '•'; color: #e69e2b; margin-left: 5px; font-weight: 700;
+  }
+  .row .name { font-size: 13.5px; font-weight: 500; }
+  .history-abn-dot {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: #e34948; margin-left: 6px; vertical-align: middle;
+  }
+  .row .ref { font-size: 11px; color: var(--text-muted); }
+  .row .valwrap { text-align: right; }
+  .row .val { font-size: 13.5px; font-weight: 600; }
+  .row .val.abn { color: var(--text-danger); }
+  .row .delta { font-size: 11px; color: var(--text-muted); margin-left: 4px; }
+  .row .info-btn {
+    flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%;
+    border: 0.5px solid var(--border-strong); background: var(--surface-1); color: var(--text-secondary);
+    font-size: 12px; font-weight: 600; line-height: 1; cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .row .info-btn:hover { background: var(--bg-accent); color: var(--text-accent); border-color: var(--border-accent); }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    align-items: center; justify-content: center; padding: 20px; z-index: 50;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-card {
+    background: var(--surface-1); border-radius: var(--radius); border: 0.5px solid var(--border);
+    max-width: 420px; width: 100%; max-height: 80vh; overflow-y: auto; padding: 1.1rem 1.25rem;
+  }
+  .modal-card h2 { font-size: 16px; font-weight: 600; margin: 0 0 2px; }
+  .modal-card .modal-cat { font-size: 11.5px; color: var(--text-muted); margin: 0 0 10px; }
+  .modal-card p { font-size: 13.5px; color: var(--text-primary); margin: 0 0 10px; line-height: 1.55; }
+  .modal-card .modal-ref { font-size: 12.5px; color: var(--text-secondary); background: var(--surface-0); border-radius: 8px; padding: 8px 10px; margin: 0 0 10px; }
+  .modal-close {
+    display: block; margin-left: auto; font-size: 13px; border-radius: 999px;
+    border: 0.5px solid var(--border-strong); background: var(--surface-0); color: var(--text-primary);
+    padding: 6px 14px; cursor: pointer;
+  }
+  .notes-block { margin-top: 16px; padding: 10px; background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--radius); }
+  .notes-block p { font-size: 11.5px; color: var(--text-secondary); margin: 0 0 6px; }
+  .notes-block ul { margin: 0; padding-left: 18px; }
+  .notes-block li { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+
+  @media (max-width: 820px) {
+    .stats-cards { display: none; }
+    .stats-line { display: block; }
+    h1 { font-size: 16px; }
+    header { padding: 0.7rem 0.9rem 0.6rem; }
+    .layout { flex-direction: column; }
+    .chart-panel {
+      flex: 0 0 42%; border-right: none; border-bottom: 0.5px solid var(--border);
+      padding: 0.75rem 0.9rem;
+    }
+    .list-panel { flex: 1; }
+    .tabs { padding: 0.7rem 0.9rem 0.5rem; }
+    .list-scroll { padding: 0 0.9rem 1.25rem; }
+    .chart-item.primary .chart-item-canvas-wrap { height: 160px; }
+    .related-grid { grid-template-columns: repeat(2, 1fr); }
+    .related-grid .chart-item-canvas-wrap { height: 110px; }
+  }
+  @media (max-width: 420px) {
+    .related-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div id="page">
+  <header>
+    <div class="title-row">
+      <div>
+        <h1 id="pageTitle">Kan Tahlili Paneli</h1>
+        <p class="sub" id="pageSub">e-Nabız tahlil sonuçları, referans aralıklarıyla birlikte</p>
+      </div>
+      <select id="personSelect"></select>
+    </div>
+    <div class="stats-cards">
+      <div class="stat-card"><p>İzlenen dönem</p><p id="statPeriod">-</p></div>
+      <div class="stat-card"><p>Toplam test</p><p id="statTotal">-</p></div>
+      <div class="stat-card danger"><p>Referans dışı</p><p id="statAbn">-</p></div>
+      <div class="stat-card"><p>Son tahlil</p><p id="statLast">-</p></div>
+    </div>
+    <p class="stats-line" id="statsLine"></p>
+  </header>
+
+  <div class="layout">
+    <div class="chart-panel">
+      <p class="metric-title" id="metricTitle">-</p>
+      <p class="metric-sub" id="metricSub"></p>
+      <div class="chart-list" id="chartList"></div>
+    </div>
+    <div class="list-panel">
+      <div class="tabs" id="categoryTabs"></div>
+      <div class="list-scroll" id="listScroll"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="infoOverlay">
+  <div class="modal-card">
+    <h2 id="infoTitle"></h2>
+    <p class="modal-cat" id="infoCat"></p>
+    <p id="infoDesc"></p>
+    <p class="modal-ref" id="infoRelated" style="display:none;"></p>
+    <div class="modal-ref" id="infoRef"></div>
+    <button class="modal-close" id="infoClose">Kapat</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const DATA = {"Doruk": {"meta": {"name": "Doruk Canbilen", "gender": "Male", "birthday": "27.03.1985", "facility": "ÇANAKKALE GELİBOLU 006 NOLU AİLE HEKİMLİĞİ BİRİMİ", "dates": ["17.08.2023", "14.08.2024", "12.08.2025", "30.07.2026"]}, "categories": {"Hemogram": {"BASO#": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 0.05, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 0.06, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 0.06, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 0.05, "unit": "10*3/uL"}]}, "BASO%": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 0.8, "unit": "%"}, {"y": "14.08.2024", "v": 0.8, "unit": "%"}, {"y": "12.08.2025", "v": 0.7, "unit": "%"}, {"y": "30.07.2026", "v": 0.7, "unit": "%"}]}, "EO#": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 0.17, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 0.12, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 0.2, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 0.18, "unit": "10*3/uL"}]}, "EO%": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 2.6, "unit": "%"}, {"y": "14.08.2024", "v": 1.6, "unit": "%"}, {"y": "12.08.2025", "v": 2.5, "unit": "%"}, {"y": "30.07.2026", "v": 2.6, "unit": "%"}]}, "HCT": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 46.2, "lo": 43.2, "hi": 54.6, "unit": "%"}, {"y": "14.08.2024", "v": 46.4, "lo": 43.2, "hi": 54.6, "unit": "%"}, {"y": "12.08.2025", "v": 45.4, "lo": 43.2, "hi": 54.6, "unit": "%"}, {"y": "30.07.2026", "v": 46.1, "lo": 43.2, "hi": 54.6, "unit": "%"}]}, "HGB": {"unit": "g/dL", "pts": [{"y": "17.08.2023", "v": 15.0, "lo": 13.2, "hi": 16.5, "unit": "g/dL"}, {"y": "14.08.2024", "v": 15.8, "lo": 13.2, "hi": 16.5, "unit": "g/dL"}, {"y": "12.08.2025", "v": 15.3, "lo": 13.2, "hi": 16.5, "unit": "g/dL"}, {"y": "30.07.2026", "v": 15.3, "lo": 13.2, "hi": 16.5, "unit": "g/dL"}]}, "IG#": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 0.02, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 0.01, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 0.03, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 0.01, "unit": "10*3/uL"}]}, "IG%": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 0.3, "unit": "%"}, {"y": "14.08.2024", "v": 0.1, "unit": "%"}, {"y": "12.08.2025", "v": 0.4, "unit": "%"}, {"y": "30.07.2026", "v": 0.1, "unit": "%"}]}, "LYMPH#": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 2.14, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 2.62, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 2.78, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 2.42, "unit": "10*3/uL"}]}, "LYMPH%": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 33.2, "unit": "%"}, {"y": "14.08.2024", "v": 34.6, "unit": "%"}, {"y": "12.08.2025", "v": 34.1, "unit": "%"}, {"y": "30.07.2026", "v": 35.1, "unit": "%"}]}, "MCH": {"unit": "pg", "pts": [{"y": "17.08.2023", "v": 29.2, "lo": 25.0, "hi": 34.0, "unit": "pg"}, {"y": "14.08.2024", "v": 30.0, "lo": 25.0, "hi": 34.0, "unit": "pg"}, {"y": "12.08.2025", "v": 29.8, "lo": 25.0, "hi": 34.0, "unit": "pg"}, {"y": "30.07.2026", "v": 30.8, "lo": 25.0, "hi": 34.0, "unit": "pg"}]}, "MCHC": {"unit": "g/dL", "pts": [{"y": "17.08.2023", "v": 32.5, "lo": 31.0, "hi": 37.0, "unit": "g/dL"}, {"y": "14.08.2024", "v": 34.1, "lo": 31.0, "hi": 37.0, "unit": "g/dL"}, {"y": "12.08.2025", "v": 33.7, "lo": 31.0, "hi": 37.0, "unit": "g/dL"}, {"y": "30.07.2026", "v": 33.2, "lo": 31.0, "hi": 37.0, "unit": "g/dL"}]}, "MCV": {"unit": "fL", "pts": [{"y": "17.08.2023", "v": 90.1, "lo": 80.0, "hi": 100.0, "unit": "fL"}, {"y": "14.08.2024", "v": 88.2, "lo": 80.0, "hi": 100.0, "unit": "fL"}, {"y": "12.08.2025", "v": 88.5, "lo": 80.0, "hi": 100.0, "unit": "fL"}, {"y": "30.07.2026", "v": 92.8, "lo": 80.0, "hi": 100.0, "unit": "fL"}]}, "MONO#": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 0.43, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 0.44, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 0.62, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 0.47, "unit": "10*3/uL"}]}, "MONO%": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 6.7, "unit": "%"}, {"y": "14.08.2024", "v": 5.8, "unit": "%"}, {"y": "12.08.2025", "v": 7.6, "unit": "%"}, {"y": "30.07.2026", "v": 6.8, "unit": "%"}]}, "MPV": {"unit": "fL", "pts": [{"y": "17.08.2023", "v": 10.1, "lo": 6.5, "hi": 12.0, "unit": "fL"}, {"y": "14.08.2024", "v": 10.8, "lo": 6.5, "hi": 12.0, "unit": "fL"}, {"y": "12.08.2025", "v": 10.6, "lo": 6.5, "hi": 12.0, "unit": "fL"}, {"y": "30.07.2026", "v": 10.1, "lo": 6.5, "hi": 12.0, "unit": "fL"}]}, "NEU#": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 3.65, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 4.33, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 4.5, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 3.78, "unit": "10*3/uL"}]}, "NEU%": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 56.7, "unit": "%"}, {"y": "14.08.2024", "v": 57.2, "unit": "%"}, {"y": "12.08.2025", "v": 55.1, "unit": "%"}, {"y": "30.07.2026", "v": 54.8, "unit": "%"}]}, "NRBC#": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 0.0, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 0.0, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 0.0, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 0.0, "unit": "10*3/uL"}]}, "NRBC%": {"unit": "/100WBC", "pts": [{"y": "17.08.2023", "v": 0.0, "unit": "/100WBC"}, {"y": "14.08.2024", "v": 0.0, "unit": "/100WBC"}, {"y": "12.08.2025", "v": 0.0, "unit": "/100WBC"}, {"y": "30.07.2026", "v": 0.0, "unit": "/100WBC"}]}, "PCT": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 0.32, "lo": 0.18, "hi": 0.35, "unit": "%"}, {"y": "14.08.2024", "v": 0.29, "lo": 0.18, "hi": 0.35, "unit": "%"}, {"y": "12.08.2025", "v": 0.3, "lo": 0.18, "hi": 0.35, "unit": "%"}, {"y": "30.07.2026", "v": 0.3, "lo": 0.18, "hi": 0.35, "unit": "%"}]}, "PDW": {"unit": "fL", "pts": [{"y": "17.08.2023", "v": 11.3, "lo": 9.0, "hi": 17.0, "unit": "fL"}, {"y": "14.08.2024", "v": 12.5, "lo": 9.0, "hi": 17.0, "unit": "fL"}, {"y": "12.08.2025", "v": 12.9, "lo": 9.0, "hi": 17.0, "unit": "fL"}, {"y": "30.07.2026", "v": 11.8, "lo": 9.0, "hi": 17.0, "unit": "fL"}]}, "P-LCR": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 25.5, "unit": "%"}, {"y": "14.08.2024", "v": 30.8, "unit": "%"}, {"y": "12.08.2025", "v": 30.1, "unit": "%"}, {"y": "30.07.2026", "v": 25.7, "unit": "%"}]}, "PLT": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 317.0, "lo": 150.0, "hi": 500.0, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 266.0, "lo": 150.0, "hi": 500.0, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 285.0, "lo": 150.0, "hi": 500.0, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 299.0, "lo": 150.0, "hi": 500.0, "unit": "10*3/uL"}]}, "RBC": {"unit": "10*6/uL", "pts": [{"y": "17.08.2023", "v": 5.13, "lo": 4.5, "hi": 6.0, "unit": "10*6/uL"}, {"y": "14.08.2024", "v": 5.26, "lo": 4.5, "hi": 6.0, "unit": "10*6/uL"}, {"y": "12.08.2025", "v": 5.13, "lo": 4.5, "hi": 6.0, "unit": "10*6/uL"}, {"y": "30.07.2026", "v": 4.97, "lo": 4.5, "hi": 6.0, "unit": "10*6/uL"}]}, "RDW": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 12.6, "lo": 10.0, "hi": 14.5, "unit": "%"}, {"y": "14.08.2024", "v": 12.4, "lo": 10.0, "hi": 14.5, "unit": "%"}, {"y": "12.08.2025", "v": 13.0, "lo": 10.0, "hi": 14.5, "unit": "%"}, {"y": "30.07.2026", "v": 12.5, "lo": 10.0, "hi": 14.5, "unit": "%"}]}, "RDW-SD": {"unit": "fL", "pts": [{"y": "17.08.2023", "v": 42.0, "unit": "fL"}, {"y": "14.08.2024", "v": 40.1, "unit": "fL"}, {"y": "12.08.2025", "v": 41.9, "unit": "fL"}, {"y": "30.07.2026", "v": 42.5, "unit": "fL"}]}, "WBC": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 6.44, "lo": 4.5, "hi": 11.0, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 7.57, "lo": 4.5, "hi": 11.0, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 8.16, "lo": 4.5, "hi": 11.0, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 6.9, "lo": 4.5, "hi": 11.0, "unit": "10*3/uL"}]}}, "Karaciğer / Böbrek": {"ALT": {"unit": "U/L", "pts": [{"y": "17.08.2023", "v": 19.0, "lo": 4.0, "hi": 41.0, "unit": "U/L"}, {"y": "14.08.2024", "v": 14.0, "lo": 4.0, "hi": 41.0, "unit": "U/L"}, {"y": "12.08.2025", "v": 21.0, "lo": 4.0, "hi": 41.0, "unit": "U/L"}, {"y": "30.07.2026", "v": 19.0, "lo": 4.0, "hi": 41.0, "unit": "U/L"}]}, "AST": {"unit": "U/L", "pts": [{"y": "17.08.2023", "v": 16.0, "lo": 5.0, "hi": 40.0, "unit": "U/L"}, {"y": "14.08.2024", "v": 16.0, "lo": 5.0, "hi": 40.0, "unit": "U/L"}, {"y": "12.08.2025", "v": 16.0, "lo": 5.0, "hi": 40.0, "unit": "U/L"}, {"y": "30.07.2026", "v": 20.0, "lo": 5.0, "hi": 40.0, "unit": "U/L"}]}, "GGT": {"unit": "U/L", "pts": [{"y": "17.08.2023", "v": 22.0, "lo": 10.0, "hi": 71.0, "unit": "U/L"}, {"y": "14.08.2024", "v": 24.0, "lo": 10.0, "hi": 71.0, "unit": "U/L"}]}, "Kreatinin": {"unit": "mg/dL", "pts": [{"y": "14.08.2024", "v": 0.79, "lo": 0.7, "hi": 1.2, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 0.78, "lo": 0.7, "hi": 1.2, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 0.85, "lo": 0.7, "hi": 1.2, "unit": "mg/dL"}]}, "LDH": {"unit": "U/L", "pts": [{"y": "14.08.2024", "v": 204.0, "lo": 135.0, "hi": 225.0, "unit": "U/L"}]}, "Potasyum (K)": {"unit": "mmol/L", "pts": [{"y": "14.08.2024", "v": 4.6, "lo": 3.5, "hi": 5.1, "unit": "mmol/L"}]}, "Sodyum (Na)": {"unit": "mmol/L", "pts": [{"y": "14.08.2024", "v": 140.0, "lo": 134.0, "hi": 146.0, "unit": "mmol/L"}]}, "tGFH (eGFR)": {"unit": "mL/dk/1.73", "pts": [{"y": "14.08.2024", "v": 113.06, "unit": "mL/dk/1.73"}, {"y": "12.08.2025", "v": 112.9, "unit": "mL/dk/1.73"}, {"y": "30.07.2026", "v": 108.0, "unit": "mL/dk/1.73"}]}, "Üre": {"unit": "mg/dL", "pts": [{"y": "14.08.2024", "v": 41.0, "lo": 16.6, "hi": 48.5, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 31.0, "lo": 16.6, "hi": 48.5, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 38.0, "lo": 16.6, "hi": 48.5, "unit": "mg/dL"}]}, "Ürik Asit": {"unit": "mg/dL", "pts": [{"y": "14.08.2024", "v": 4.5, "lo": 3.4, "hi": 7.0, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 4.8, "lo": 3.4, "hi": 7.0, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 4.5, "lo": 3.4, "hi": 7.0, "unit": "mg/dL"}]}}, "Lipid / Metabolik": {"Glukoz (Açlık)": {"unit": "mg/dL", "pts": [{"y": "17.08.2023", "v": 84.0, "lo": 74.0, "hi": 109.0, "unit": "mg/dL"}, {"y": "14.08.2024", "v": 81.0, "lo": 74.0, "hi": 109.0, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 86.0, "lo": 74.0, "hi": 109.0, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 83.0, "lo": 74.0, "hi": 109.0, "unit": "mg/dL"}]}, "HDL": {"unit": "mg/dL", "pts": [{"y": "17.08.2023", "v": 59.7, "lo": 35.0, "hi": 100.0, "unit": "mg/dL"}, {"y": "14.08.2024", "v": 70.2, "lo": 35.0, "hi": 100.0, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 80.5, "lo": 35.0, "hi": 100.0, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 63.0, "lo": 35.0, "hi": 100.0, "unit": "mg/dL"}]}, "Kolesterol": {"unit": "mg/dL", "pts": [{"y": "17.08.2023", "v": 147.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}, {"y": "14.08.2024", "v": 152.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 149.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 132.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}]}, "LDL": {"unit": "mg/dl", "pts": [{"y": "17.08.2023", "v": 76.0, "lo": 30.0, "hi": 130.0, "unit": "mg/dl"}, {"y": "14.08.2024", "v": 71.0, "lo": 30.0, "hi": 130.0, "unit": "mg/dl"}, {"y": "12.08.2025", "v": 51.0, "lo": 30.0, "hi": 130.0, "unit": "mg/dl"}, {"y": "30.07.2026", "v": 61.0, "lo": 30.0, "hi": 130.0, "unit": "mg/dl"}]}, "Trigliserid": {"unit": "mg/dL", "pts": [{"y": "17.08.2023", "v": 55.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}, {"y": "14.08.2024", "v": 55.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 86.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 41.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}]}, "HbA1c": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 5.4, "lo": 4.0, "hi": 6.0, "unit": "%"}, {"y": "14.08.2024", "v": 5.6, "lo": 4.0, "hi": 6.0, "unit": "%"}, {"y": "12.08.2025", "v": 4.8, "lo": 4.0, "hi": 6.0, "unit": "%"}, {"y": "30.07.2026", "v": 5.3, "lo": 4.0, "hi": 6.0, "unit": "%"}]}, "HbA1c (mmol)": {"unit": "mmol/mol", "pts": [{"y": "17.08.2023", "v": 35.0, "lo": 20.0, "hi": 42.0, "unit": "mmol/L"}, {"y": "14.08.2024", "v": 38.0, "lo": 20.0, "hi": 42.0, "unit": "mmol/L"}, {"y": "12.08.2025", "v": 29.7, "lo": 20.0, "hi": 42.0, "unit": "mmol/L"}, {"y": "30.07.2026", "v": 34.0, "lo": 20.0, "hi": 42.0, "unit": "mmol/mol"}]}, "İnsülin": {"unit": "mU/L", "pts": [{"y": "14.08.2024", "v": 7.85, "lo": 2.6, "hi": 24.9, "unit": "µU/mL"}, {"y": "12.08.2025", "v": 7.03, "lo": 2.6, "hi": 24.9, "unit": "mU/L"}]}}, "Tiroid": {"FT3": {"unit": "ng/L", "pts": [{"y": "17.08.2023", "v": 4.71, "lo": 3.1, "hi": 6.8, "unit": "pmol/L"}, {"y": "14.08.2024", "v": 5.77, "lo": 3.1, "hi": 6.8, "unit": "pmol/L"}, {"y": "12.08.2025", "v": 4.58, "lo": 2.408, "hi": 5.289, "unit": "ng/L"}]}, "FT4": {"unit": "ng/dL", "pts": [{"y": "17.08.2023", "v": 17.5, "lo": 12.0, "hi": 22.0, "unit": "pmol/L"}, {"y": "14.08.2024", "v": 16.0, "lo": 12.0, "hi": 22.0, "unit": "pmol/L"}, {"y": "12.08.2025", "v": 1.13, "lo": 0.93, "hi": 1.7, "unit": "ng/dL"}, {"y": "30.07.2026", "v": 1.12, "lo": 0.93, "hi": 1.7, "unit": "ng/dL"}]}, "TSH": {"unit": "mIU/L", "pts": [{"y": "17.08.2023", "v": 1.55, "lo": 0.27, "hi": 4.2, "unit": "µIU/mL"}, {"y": "14.08.2024", "v": 2.19, "lo": 0.27, "hi": 4.5, "unit": "µIU/mL"}, {"y": "12.08.2025", "v": 1.43, "lo": 0.27, "hi": 4.5, "unit": "mIU/L"}, {"y": "30.07.2026", "v": 1.46, "lo": 0.27, "hi": 4.5, "unit": "mIU/L"}]}, "Anti-TPO": {"unit": "IU/mL", "pts": [{"y": "30.07.2026", "v": 9.9, "lo": 0.0, "hi": 34.0, "unit": "IU/mL"}]}}, "Vitamin / Mineral": {"Ferritin": {"unit": "µg/L", "pts": [{"y": "17.08.2023", "v": 76.2, "lo": 30.0, "hi": 400.0, "unit": "ng/mL"}, {"y": "14.08.2024", "v": 63.4, "lo": 30.0, "hi": 400.0, "unit": "ng/mL"}, {"y": "12.08.2025", "v": 67.8, "lo": 30.0, "hi": 400.0, "unit": "µg/L"}, {"y": "30.07.2026", "v": 68.1, "lo": 30.0, "hi": 400.0, "unit": "µg/L"}]}, "Folat": {"unit": "µg/L", "pts": [{"y": "17.08.2023", "v": 3.47, "lo": 3.9, "hi": 26.8, "unit": "ng/mL"}, {"y": "14.08.2024", "v": 3.56, "lo": 3.9, "hi": 26.8, "unit": "ng/mL"}, {"y": "30.07.2026", "v": 3.95, "lo": 3.9, "hi": 26.8, "unit": "µg/L"}]}, "Vitamin B12": {"unit": "ng/L", "pts": [{"y": "17.08.2023", "v": 389.0, "lo": 197.0, "hi": 771.0, "unit": "pg/mL"}, {"y": "14.08.2024", "v": 360.0, "lo": 197.0, "hi": 771.0, "unit": "pg/mL"}, {"y": "12.08.2025", "v": 285.0, "lo": 197.0, "hi": 771.0, "unit": "ng/L"}, {"y": "30.07.2026", "v": 338.0, "lo": 197.0, "hi": 771.0, "unit": "ng/L"}]}, "Demir (Fe)": {"unit": "µg/dL", "pts": [{"y": "12.08.2025", "v": 181.0, "lo": 33.0, "hi": 193.0, "unit": "µg/dL"}, {"y": "30.07.2026", "v": 115.0, "lo": 33.0, "hi": 193.0, "unit": "µg/dL"}]}}, "Diğer": {"CRP": {"unit": "mg/L", "pts": [{"y": "14.08.2024", "v": 0.1, "lo": 0.0, "hi": 5.0, "unit": "mg/L"}, {"y": "12.08.2025", "v": 2.02, "lo": 0.0, "hi": 5.0, "unit": "mg/L"}, {"y": "30.07.2026", "v": 1.5, "lo": 0.0, "hi": 5.0, "unit": "mg/L"}]}, "PSA (total)": {"unit": "µg/L", "pts": [{"y": "12.08.2025", "v": 0.716, "lo": 0.01, "hi": 2.0, "unit": "µg/L"}, {"y": "30.07.2026", "v": 0.836, "lo": 0.01, "hi": 2.0, "unit": "µg/L"}]}}}, "notes": []}, "Irem": {"meta": {"name": "Rahime İrem Demirbaş Canbilen", "gender": "Female", "birthday": "19.02.1985", "facility": "ÇANAKKALE GELİBOLU 006 NOLU AİLE HEKİMLİĞİ BİRİMİ", "dates": ["17.08.2023", "14.08.2024", "12.08.2025", "30.07.2026"]}, "categories": {"Hemogram": {"BASO#": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 0.03, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 0.02, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 0.04, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 0.03, "unit": "10*3/uL"}]}, "BASO%": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 0.7, "unit": "%"}, {"y": "14.08.2024", "v": 0.5, "unit": "%"}, {"y": "12.08.2025", "v": 0.8, "unit": "%"}, {"y": "30.07.2026", "v": 0.6, "unit": "%"}]}, "EO#": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 0.28, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 0.19, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 0.34, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 0.28, "unit": "10*3/uL"}]}, "EO%": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 6.5, "unit": "%"}, {"y": "14.08.2024", "v": 4.6, "unit": "%"}, {"y": "12.08.2025", "v": 6.6, "unit": "%"}, {"y": "30.07.2026", "v": 5.7, "unit": "%"}]}, "HCT": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 40.2, "lo": 37.0, "hi": 49.0, "unit": "%"}, {"y": "14.08.2024", "v": 40.2, "lo": 37.0, "hi": 49.0, "unit": "%"}, {"y": "12.08.2025", "v": 41.1, "lo": 37.0, "hi": 49.0, "unit": "%"}, {"y": "30.07.2026", "v": 40.4, "lo": 37.0, "hi": 49.0, "unit": "%"}]}, "HGB": {"unit": "g/dL", "pts": [{"y": "17.08.2023", "v": 12.7, "lo": 11.1, "hi": 14.7, "unit": "g/dL"}, {"y": "14.08.2024", "v": 13.5, "lo": 11.1, "hi": 14.7, "unit": "g/dL"}, {"y": "12.08.2025", "v": 13.3, "lo": 11.1, "hi": 14.7, "unit": "g/dL"}, {"y": "30.07.2026", "v": 13.2, "lo": 11.1, "hi": 14.7, "unit": "g/dL"}]}, "IG#": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 0.01, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 0.01, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 0.01, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 0.01, "unit": "10*3/uL"}]}, "IG%": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 0.2, "unit": "%"}, {"y": "14.08.2024", "v": 0.2, "unit": "%"}, {"y": "12.08.2025", "v": 0.2, "unit": "%"}, {"y": "30.07.2026", "v": 0.2, "unit": "%"}]}, "LYMPH#": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 1.52, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 1.6, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 2.0, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 1.97, "unit": "10*3/uL"}]}, "LYMPH%": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 35.0, "unit": "%"}, {"y": "14.08.2024", "v": 38.5, "unit": "%"}, {"y": "12.08.2025", "v": 39.1, "unit": "%"}, {"y": "30.07.2026", "v": 40.0, "unit": "%"}]}, "MCH": {"unit": "pg", "pts": [{"y": "17.08.2023", "v": 27.4, "lo": 25.0, "hi": 34.0, "unit": "pg"}, {"y": "14.08.2024", "v": 29.1, "lo": 25.0, "hi": 34.0, "unit": "pg"}, {"y": "12.08.2025", "v": 28.5, "lo": 25.0, "hi": 34.0, "unit": "pg"}, {"y": "30.07.2026", "v": 28.8, "lo": 25.0, "hi": 34.0, "unit": "pg"}]}, "MCHC": {"unit": "g/dL", "pts": [{"y": "17.08.2023", "v": 31.6, "lo": 31.0, "hi": 37.0, "unit": "g/dL"}, {"y": "14.08.2024", "v": 33.6, "lo": 31.0, "hi": 37.0, "unit": "g/dL"}, {"y": "12.08.2025", "v": 32.4, "lo": 31.0, "hi": 37.0, "unit": "g/dL"}, {"y": "30.07.2026", "v": 32.7, "lo": 31.0, "hi": 37.0, "unit": "g/dL"}]}, "MCV": {"unit": "fL", "pts": [{"y": "17.08.2023", "v": 86.8, "lo": 80.0, "hi": 100.0, "unit": "fL"}, {"y": "14.08.2024", "v": 86.6, "lo": 80.0, "hi": 100.0, "unit": "fL"}, {"y": "12.08.2025", "v": 88.2, "lo": 80.0, "hi": 100.0, "unit": "fL"}, {"y": "30.07.2026", "v": 88.0, "lo": 80.0, "hi": 100.0, "unit": "fL"}]}, "MONO#": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 0.34, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 0.27, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 0.32, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 0.33, "unit": "10*3/uL"}]}, "MONO%": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 7.8, "unit": "%"}, {"y": "14.08.2024", "v": 6.5, "unit": "%"}, {"y": "12.08.2025", "v": 6.3, "unit": "%"}, {"y": "30.07.2026", "v": 6.7, "unit": "%"}]}, "MPV": {"unit": "fL", "pts": [{"y": "17.08.2023", "v": 11.0, "lo": 6.5, "hi": 12.0, "unit": "fL"}, {"y": "14.08.2024", "v": 12.2, "lo": 6.5, "hi": 12.0, "unit": "fL"}, {"y": "12.08.2025", "v": 11.8, "lo": 6.5, "hi": 12.0, "unit": "fL"}, {"y": "30.07.2026", "v": 11.4, "lo": 6.5, "hi": 12.0, "unit": "fL"}]}, "NEU#": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 2.17, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 2.08, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 2.42, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 2.31, "unit": "10*3/uL"}]}, "NEU%": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 50.0, "unit": "%"}, {"y": "14.08.2024", "v": 49.9, "unit": "%"}, {"y": "12.08.2025", "v": 47.2, "unit": "%"}, {"y": "30.07.2026", "v": 47.0, "unit": "%"}]}, "NRBC#": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 0.0, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 0.0, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 0.0, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 0.0, "unit": "10*3/uL"}]}, "NRBC%": {"unit": "/100WBC", "pts": [{"y": "17.08.2023", "v": 0.0, "unit": "/100WBC"}, {"y": "14.08.2024", "v": 0.0, "unit": "/100WBC"}, {"y": "12.08.2025", "v": 0.0, "unit": "/100WBC"}, {"y": "30.07.2026", "v": 0.0, "unit": "/100WBC"}]}, "PCT": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 0.27, "lo": 0.18, "hi": 0.35, "unit": "%"}, {"y": "14.08.2024", "v": 0.23, "lo": 0.18, "hi": 0.35, "unit": "%"}, {"y": "12.08.2025", "v": 0.26, "lo": 0.18, "hi": 0.35, "unit": "%"}, {"y": "30.07.2026", "v": 0.27, "lo": 0.18, "hi": 0.35, "unit": "%"}]}, "PDW": {"unit": "fL", "pts": [{"y": "17.08.2023", "v": 13.3, "lo": 9.0, "hi": 17.0, "unit": "fL"}, {"y": "14.08.2024", "v": 14.5, "lo": 9.0, "hi": 17.0, "unit": "fL"}, {"y": "12.08.2025", "v": 15.1, "lo": 9.0, "hi": 17.0, "unit": "fL"}, {"y": "30.07.2026", "v": 14.0, "lo": 9.0, "hi": 17.0, "unit": "fL"}]}, "P-LCR": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 33.6, "unit": "%"}, {"y": "14.08.2024", "v": 40.7, "unit": "%"}, {"y": "12.08.2025", "v": 38.8, "unit": "%"}, {"y": "30.07.2026", "v": 36.7, "unit": "%"}]}, "PLT": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 243.0, "lo": 150.0, "hi": 500.0, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 192.0, "lo": 150.0, "hi": 500.0, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 220.0, "lo": 150.0, "hi": 500.0, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 232.0, "lo": 150.0, "hi": 500.0, "unit": "10*3/uL"}]}, "RBC": {"unit": "10*6/uL", "pts": [{"y": "17.08.2023", "v": 4.63, "lo": 3.8, "hi": 5.5, "unit": "10*6/uL"}, {"y": "14.08.2024", "v": 4.64, "lo": 3.8, "hi": 5.5, "unit": "10*6/uL"}, {"y": "12.08.2025", "v": 4.66, "lo": 3.8, "hi": 5.5, "unit": "10*6/uL"}, {"y": "30.07.2026", "v": 4.59, "lo": 3.8, "hi": 5.5, "unit": "10*6/uL"}]}, "RDW": {"unit": "%", "pts": [{"y": "17.08.2023", "v": 13.1, "lo": 10.0, "hi": 14.5, "unit": "%"}, {"y": "14.08.2024", "v": 12.9, "lo": 10.0, "hi": 14.5, "unit": "%"}, {"y": "12.08.2025", "v": 13.0, "lo": 10.0, "hi": 14.5, "unit": "%"}, {"y": "30.07.2026", "v": 13.2, "lo": 10.0, "hi": 14.5, "unit": "%"}]}, "RDW-SD": {"unit": "fL", "pts": [{"y": "17.08.2023", "v": 41.4, "unit": "fL"}, {"y": "14.08.2024", "v": 40.3, "unit": "fL"}, {"y": "12.08.2025", "v": 41.3, "unit": "fL"}, {"y": "30.07.2026", "v": 42.2, "unit": "fL"}]}, "WBC": {"unit": "10*3/uL", "pts": [{"y": "17.08.2023", "v": 4.34, "lo": 4.5, "hi": 11.0, "unit": "10*3/uL"}, {"y": "14.08.2024", "v": 4.16, "lo": 4.5, "hi": 11.0, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 5.12, "lo": 4.5, "hi": 11.0, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 4.92, "lo": 4.5, "hi": 11.0, "unit": "10*3/uL"}]}}, "Karaciğer / Böbrek": {"ALT": {"unit": "U/L", "pts": [{"y": "17.08.2023", "v": 12.0, "lo": 3.0, "hi": 33.0, "unit": "U/L"}, {"y": "14.08.2024", "v": 9.0, "lo": 3.0, "hi": 33.0, "unit": "U/L"}, {"y": "12.08.2025", "v": 13.0, "lo": 3.0, "hi": 33.0, "unit": "U/L"}, {"y": "30.07.2026", "v": 12.0, "lo": 3.0, "hi": 33.0, "unit": "U/L"}]}, "AST": {"unit": "U/L", "pts": [{"y": "17.08.2023", "v": 12.0, "lo": 5.0, "hi": 35.0, "unit": "U/L"}, {"y": "14.08.2024", "v": 16.0, "lo": 5.0, "hi": 35.0, "unit": "U/L"}, {"y": "12.08.2025", "v": 13.0, "lo": 5.0, "hi": 35.0, "unit": "U/L"}, {"y": "30.07.2026", "v": 13.0, "lo": 5.0, "hi": 35.0, "unit": "U/L"}]}, "GGT": {"unit": "U/L", "pts": [{"y": "17.08.2023", "v": 15.0, "lo": 6.0, "hi": 42.0, "unit": "U/L"}, {"y": "14.08.2024", "v": 14.0, "lo": 6.0, "hi": 42.0, "unit": "U/L"}]}, "Kreatinin": {"unit": "mg/dL", "pts": [{"y": "14.08.2024", "v": 0.62, "lo": 0.5, "hi": 0.9, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 0.63, "lo": 0.5, "hi": 0.9, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 0.73, "lo": 0.5, "hi": 0.9, "unit": "mg/dL"}]}, "LDH": {"unit": "U/L", "pts": [{"y": "14.08.2024", "v": 129.0, "lo": 135.0, "hi": 214.0, "unit": "U/L"}]}, "Potasyum (K)": {"unit": "mmol/L", "pts": [{"y": "14.08.2024", "v": 4.7, "lo": 3.5, "hi": 5.1, "unit": "mmol/L"}]}, "Sodyum (Na)": {"unit": "mmol/L", "pts": [{"y": "14.08.2024", "v": 140.0, "lo": 134.0, "hi": 146.0, "unit": "mmol/L"}]}, "tGFH (eGFR)": {"unit": "mL/dk/1.73", "pts": [{"y": "14.08.2024", "v": 113.9, "unit": "mL/dk/1.73"}, {"y": "12.08.2025", "v": 112.55, "unit": "mL/dk/1.73"}, {"y": "30.07.2026", "v": 103.0, "unit": "mL/dk/1.73"}]}, "Üre": {"unit": "mg/dL", "pts": [{"y": "14.08.2024", "v": 28.0, "lo": 16.6, "hi": 48.5, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 26.0, "lo": 16.6, "hi": 48.5, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 29.0, "lo": 16.6, "hi": 48.5, "unit": "mg/dL"}]}, "Ürik Asit": {"unit": "mg/dL", "pts": [{"y": "14.08.2024", "v": 4.1, "lo": 2.4, "hi": 5.7, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 4.6, "lo": 2.4, "hi": 5.7, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 4.2, "lo": 2.4, "hi": 5.7, "unit": "mg/dL"}]}}, "Lipid / Metabolik": {"HDL": {"unit": "mg/dL", "pts": [{"y": "17.08.2023", "v": 62.4, "lo": 45.0, "hi": 100.0, "unit": "mg/dL"}, {"y": "14.08.2024", "v": 56.3, "lo": 45.0, "hi": 100.0, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 68.6, "lo": 45.0, "hi": 100.0, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 59.0, "lo": 45.0, "hi": 100.0, "unit": "mg/dL"}]}, "Kolesterol": {"unit": "mg/dL", "pts": [{"y": "17.08.2023", "v": 158.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}, {"y": "14.08.2024", "v": 161.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 157.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 155.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}]}, "LDL": {"unit": "mg/dl", "pts": [{"y": "17.08.2023", "v": 80.0, "lo": 30.0, "hi": 130.0, "unit": "mg/dl"}, {"y": "14.08.2024", "v": 95.0, "lo": 30.0, "hi": 130.0, "unit": "mg/dl"}, {"y": "12.08.2025", "v": 76.0, "lo": 30.0, "hi": 130.0, "unit": "mg/dl"}, {"y": "30.07.2026", "v": 86.0, "lo": 30.0, "hi": 130.0, "unit": "mg/dl"}]}, "Trigliserid": {"unit": "mg/dL", "pts": [{"y": "17.08.2023", "v": 76.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}, {"y": "14.08.2024", "v": 47.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 60.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 51.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}]}, "Glukoz (Açlık)": {"unit": "mg/dL", "pts": [{"y": "14.08.2024", "v": 87.0, "lo": 74.0, "hi": 109.0, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 84.0, "lo": 74.0, "hi": 109.0, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 79.0, "lo": 74.0, "hi": 109.0, "unit": "mg/dL"}]}, "İnsülin": {"unit": "mU/L", "pts": [{"y": "14.08.2024", "v": 5.98, "lo": 2.6, "hi": 24.9, "unit": "µU/mL"}, {"y": "12.08.2025", "v": 7.34, "lo": 2.6, "hi": 24.9, "unit": "mU/L"}]}, "HbA1c": {"unit": "%", "pts": [{"y": "14.08.2024", "v": 5.2, "lo": 4.0, "hi": 6.0, "unit": "%"}, {"y": "12.08.2025", "v": 4.7, "lo": 4.0, "hi": 6.0, "unit": "%"}, {"y": "30.07.2026", "v": 5.3, "lo": 4.0, "hi": 6.0, "unit": "%"}]}, "HbA1c (mmol)": {"unit": "mmol/mol", "pts": [{"y": "14.08.2024", "v": 33.0, "lo": 20.0, "hi": 42.0, "unit": "mmol/L"}, {"y": "12.08.2025", "v": 28.8, "lo": 20.0, "hi": 42.0, "unit": "mmol/L"}, {"y": "30.07.2026", "v": 34.0, "lo": 20.0, "hi": 42.0, "unit": "mmol/mol"}]}}, "Tiroid": {"FT3": {"unit": "ng/L", "pts": [{"y": "17.08.2023", "v": 4.29, "lo": 3.1, "hi": 6.8, "unit": "pmol/L"}, {"y": "14.08.2024", "v": 5.03, "lo": 3.1, "hi": 6.8, "unit": "pmol/L"}, {"y": "12.08.2025", "v": 3.58, "lo": 2.408, "hi": 5.289, "unit": "ng/L"}]}, "FT4": {"unit": "ng/dL", "pts": [{"y": "17.08.2023", "v": 17.0, "lo": 12.0, "hi": 22.0, "unit": "pmol/L"}, {"y": "14.08.2024", "v": 18.9, "lo": 12.0, "hi": 22.0, "unit": "pmol/L"}, {"y": "12.08.2025", "v": 1.23, "lo": 0.93, "hi": 1.7, "unit": "ng/dL"}, {"y": "30.07.2026", "v": 1.2, "lo": 0.93, "hi": 1.7, "unit": "ng/dL"}]}, "TSH": {"unit": "mIU/L", "pts": [{"y": "17.08.2023", "v": 2.07, "lo": 0.27, "hi": 4.2, "unit": "µIU/mL"}, {"y": "14.08.2024", "v": 2.72, "lo": 0.27, "hi": 4.5, "unit": "µIU/mL"}, {"y": "12.08.2025", "v": 2.51, "lo": 0.27, "hi": 4.5, "unit": "mIU/L"}, {"y": "30.07.2026", "v": 2.87, "lo": 0.27, "hi": 4.5, "unit": "mIU/L"}]}, "Anti-TPO": {"unit": "IU/mL", "pts": [{"y": "30.07.2026", "v": 18.1, "lo": 0.0, "hi": 34.0, "unit": "IU/mL"}]}}, "Vitamin / Mineral": {"Ferritin": {"unit": "µg/L", "pts": [{"y": "17.08.2023", "v": 9.59, "lo": 13.0, "hi": 150.0, "unit": "ng/mL"}, {"y": "14.08.2024", "v": 11.2, "lo": 13.0, "hi": 150.0, "unit": "ng/mL"}, {"y": "12.08.2025", "v": 22.0, "lo": 13.0, "hi": 150.0, "unit": "µg/L"}, {"y": "30.07.2026", "v": 9.81, "lo": 13.0, "hi": 150.0, "unit": "µg/L"}]}, "Folat": {"unit": "µg/L", "pts": [{"y": "17.08.2023", "v": 10.9, "lo": 3.9, "hi": 26.8, "unit": "ng/mL"}, {"y": "14.08.2024", "v": 8.04, "lo": 3.9, "hi": 26.8, "unit": "ng/mL"}, {"y": "30.07.2026", "v": 10.9, "lo": 3.9, "hi": 26.8, "unit": "µg/L"}]}, "Vitamin B12": {"unit": "ng/L", "pts": [{"y": "17.08.2023", "v": 224.0, "lo": 197.0, "hi": 771.0, "unit": "pg/mL"}, {"y": "14.08.2024", "v": 290.0, "lo": 197.0, "hi": 771.0, "unit": "pg/mL"}, {"y": "12.08.2025", "v": 255.0, "lo": 197.0, "hi": 771.0, "unit": "ng/L"}, {"y": "30.07.2026", "v": 231.0, "lo": 197.0, "hi": 771.0, "unit": "ng/L"}]}, "Demir (Fe)": {"unit": "µg/dL", "pts": [{"y": "12.08.2025", "v": 106.0, "lo": 33.0, "hi": 193.0, "unit": "µg/dL"}, {"y": "30.07.2026", "v": 62.0, "lo": 33.0, "hi": 193.0, "unit": "µg/dL"}]}}, "Diğer": {"CRP": {"unit": "mg/L", "pts": [{"y": "14.08.2024", "v": 0.1, "lo": 0.0, "hi": 5.0, "unit": "mg/L"}, {"y": "12.08.2025", "v": 2.39, "lo": 0.0, "hi": 5.0, "unit": "mg/L"}, {"y": "30.07.2026", "v": 0.5, "lo": 0.0, "hi": 5.0, "unit": "mg/L"}]}}}, "notes": []}, "Deniz": {"meta": {"name": "Deniz Canbilen", "gender": "Female", "birthday": "19.10.2017", "facility": "ÇANAKKALE GELİBOLU 006 NOLU AİLE HEKİMLİĞİ BİRİMİ", "dates": ["26.04.2023", "14.08.2024", "12.08.2025", "18.03.2026", "30.07.2026"]}, "categories": {"Hemogram": {"BASO#": {"unit": "10*3/uL", "pts": [{"y": "26.04.2023", "v": 0.04, "lo": 0.0, "hi": 0.2, "unit": "10³/uL"}, {"y": "14.08.2024", "v": 0.06, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 0.04, "unit": "10*3/uL"}, {"y": "18.03.2026", "v": 0.1, "disp": "<0.1", "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 0.03, "unit": "10*3/uL"}]}, "BASO%": {"unit": "%", "pts": [{"y": "26.04.2023", "v": 0.5, "lo": 0.0, "hi": 2.0, "unit": "%"}, {"y": "14.08.2024", "v": 1.0, "unit": "%"}, {"y": "12.08.2025", "v": 0.6, "unit": "%"}, {"y": "30.07.2026", "v": 0.6, "unit": "%"}]}, "EO#": {"unit": "10*3/uL", "pts": [{"y": "26.04.2023", "v": 0.22, "lo": 0.0, "hi": 0.5, "unit": "10³/uL"}, {"y": "14.08.2024", "v": 0.28, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 0.2, "unit": "10*3/uL"}, {"y": "18.03.2026", "v": 0.1, "disp": "0.1", "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 0.18, "unit": "10*3/uL"}]}, "EO%": {"unit": "%", "pts": [{"y": "26.04.2023", "v": 2.9, "lo": 0.0, "hi": 5.0, "unit": "%"}, {"y": "14.08.2024", "v": 4.5, "unit": "%"}, {"y": "12.08.2025", "v": 2.9, "unit": "%"}, {"y": "30.07.2026", "v": 3.7, "unit": "%"}]}, "HCT": {"unit": "%", "pts": [{"y": "26.04.2023", "v": 37.2, "lo": 34.0, "hi": 40.0, "unit": "%"}, {"y": "14.08.2024", "v": 40.6, "lo": 37.0, "hi": 45.0, "unit": "%"}, {"y": "12.08.2025", "v": 40.0, "lo": 37.0, "hi": 45.0, "unit": "%"}, {"y": "18.03.2026", "v": 37.0, "disp": "37", "note": "orijinal: 0.37 l/l", "unit": "%"}, {"y": "30.07.2026", "v": 38.9, "lo": 37.0, "hi": 45.0, "unit": "%"}]}, "HGB": {"unit": "g/dL", "pts": [{"y": "26.04.2023", "v": 12.8, "lo": 11.2, "hi": 14.6, "unit": "g/dL"}, {"y": "14.08.2024", "v": 13.6, "lo": 11.5, "hi": 14.5, "unit": "g/dL"}, {"y": "12.08.2025", "v": 13.0, "lo": 11.5, "hi": 14.5, "unit": "g/dL"}, {"y": "18.03.2026", "v": 12.56892, "disp": "12.57", "note": "orijinal: 7.8 mmol/l", "unit": "g/dL"}, {"y": "30.07.2026", "v": 12.8, "lo": 11.5, "hi": 14.5, "unit": "g/dL"}]}, "LYMPH#": {"unit": "10*3/uL", "pts": [{"y": "26.04.2023", "v": 3.55, "lo": 2.0, "hi": 8.0, "unit": "10³/uL"}, {"y": "14.08.2024", "v": 3.31, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 2.69, "unit": "10*3/uL"}, {"y": "18.03.2026", "v": 3.8, "disp": "3.8", "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 2.83, "unit": "10*3/uL"}]}, "LYMPH%": {"unit": "%", "pts": [{"y": "26.04.2023", "v": 47.2, "lo": 30.0, "hi": 70.0, "unit": "%"}, {"y": "14.08.2024", "v": 53.0, "unit": "%"}, {"y": "12.08.2025", "v": 39.6, "unit": "%"}, {"y": "30.07.2026", "v": 57.8, "unit": "%"}]}, "MCH": {"unit": "pg", "pts": [{"y": "26.04.2023", "v": 26.3, "lo": 25.0, "hi": 31.0, "unit": "pg"}, {"y": "14.08.2024", "v": 27.0, "lo": 25.0, "hi": 34.0, "unit": "pg"}, {"y": "12.08.2025", "v": 26.9, "lo": 25.0, "hi": 34.0, "unit": "pg"}, {"y": "30.07.2026", "v": 27.4, "lo": 25.0, "hi": 34.0, "unit": "pg"}]}, "MCHC": {"unit": "g/dL", "pts": [{"y": "26.04.2023", "v": 34.4, "lo": 32.0, "hi": 37.0, "unit": "g/dl"}, {"y": "14.08.2024", "v": 33.5, "lo": 31.0, "hi": 37.0, "unit": "g/dL"}, {"y": "12.08.2025", "v": 32.5, "lo": 31.0, "hi": 37.0, "unit": "g/dL"}, {"y": "18.03.2026", "v": 33.67826, "disp": "33.68", "note": "orijinal: 20.9 mmol/l", "unit": "g/dL"}, {"y": "30.07.2026", "v": 32.9, "lo": 31.0, "hi": 37.0, "unit": "g/dL"}]}, "MCV": {"unit": "fL", "pts": [{"y": "26.04.2023", "v": 76.4, "lo": 73.0, "hi": 85.0, "unit": "fL"}, {"y": "14.08.2024", "v": 80.6, "lo": 80.0, "hi": 100.0, "unit": "fL"}, {"y": "12.08.2025", "v": 82.6, "lo": 80.0, "hi": 100.0, "unit": "fL"}, {"y": "18.03.2026", "v": 82.5, "disp": "82.5", "unit": "fL"}, {"y": "30.07.2026", "v": 83.1, "lo": 80.0, "hi": 100.0, "unit": "fL"}]}, "MONO#": {"unit": "10*3/uL", "pts": [{"y": "26.04.2023", "v": 0.5, "lo": 0.0, "hi": 0.9, "unit": "10³/uL"}, {"y": "14.08.2024", "v": 0.45, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 0.46, "unit": "10*3/uL"}, {"y": "18.03.2026", "v": 0.3, "disp": "0.3", "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 0.39, "unit": "10*3/uL"}]}, "MONO%": {"unit": "%", "pts": [{"y": "26.04.2023", "v": 6.6, "lo": 0.0, "hi": 12.0, "unit": "%"}, {"y": "14.08.2024", "v": 7.2, "unit": "%"}, {"y": "12.08.2025", "v": 6.8, "unit": "%"}, {"y": "30.07.2026", "v": 8.0, "unit": "%"}]}, "MPV": {"unit": "fL", "pts": [{"y": "26.04.2023", "v": 9.3, "lo": 6.0, "hi": 11.0, "unit": "fl"}, {"y": "14.08.2024", "v": 11.7, "lo": 6.5, "hi": 12.0, "unit": "fL"}, {"y": "12.08.2025", "v": 11.2, "lo": 6.5, "hi": 12.0, "unit": "fL"}, {"y": "30.07.2026", "v": 11.1, "lo": 6.5, "hi": 12.0, "unit": "fL"}]}, "NEU#": {"unit": "10*3/uL", "pts": [{"y": "26.04.2023", "v": 3.21, "lo": 2.5, "hi": 6.0, "unit": "10³/uL"}, {"y": "14.08.2024", "v": 2.14, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 3.4, "unit": "10*3/uL"}, {"y": "18.03.2026", "v": 3.2, "disp": "3.2", "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 1.47, "unit": "10*3/uL"}]}, "NEU%": {"unit": "%", "pts": [{"y": "26.04.2023", "v": 42.8, "lo": 25.0, "hi": 60.0, "unit": "%"}, {"y": "14.08.2024", "v": 34.3, "unit": "%"}, {"y": "12.08.2025", "v": 50.1, "unit": "%"}, {"y": "30.07.2026", "v": 29.9, "unit": "%"}]}, "PCT": {"unit": "%", "pts": [{"y": "26.04.2023", "v": 0.31, "lo": 0.2, "hi": 0.5, "unit": ""}, {"y": "14.08.2024", "v": 0.28, "lo": 0.18, "hi": 0.35, "unit": "%"}, {"y": "12.08.2025", "v": 0.28, "lo": 0.18, "hi": 0.35, "unit": "%"}, {"y": "30.07.2026", "v": 0.26, "lo": 0.18, "hi": 0.35, "unit": "%"}]}, "PDW": {"unit": "fL", "pts": [{"y": "26.04.2023", "v": 9.8, "lo": 11.3, "hi": 15.3, "unit": ""}, {"y": "14.08.2024", "v": 14.8, "lo": 9.0, "hi": 17.0, "unit": "fL"}, {"y": "12.08.2025", "v": 13.7, "lo": 9.0, "hi": 17.0, "unit": "fL"}, {"y": "30.07.2026", "v": 12.4, "lo": 9.0, "hi": 17.0, "unit": "fL"}]}, "P-LCR": {"unit": "%", "pts": [{"y": "26.04.2023", "v": 18.5, "lo": 13.0, "hi": 43.0, "unit": "%"}, {"y": "14.08.2024", "v": 38.5, "unit": "%"}, {"y": "12.08.2025", "v": 35.1, "unit": "%"}, {"y": "30.07.2026", "v": 34.5, "unit": "%"}]}, "PLT": {"unit": "10*3/uL", "pts": [{"y": "26.04.2023", "v": 337.0, "lo": 150.0, "hi": 350.0, "unit": "10³/uL"}, {"y": "14.08.2024", "v": 239.0, "lo": 200.0, "hi": 400.0, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 253.0, "lo": 200.0, "hi": 400.0, "unit": "10*3/uL"}, {"y": "18.03.2026", "v": 278.0, "disp": "278", "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 235.0, "lo": 200.0, "hi": 400.0, "unit": "10*3/uL"}]}, "RBC": {"unit": "10*6/uL", "pts": [{"y": "26.04.2023", "v": 4.87, "lo": 3.6, "hi": 5.2, "unit": "10^6/uL"}, {"y": "14.08.2024", "v": 5.04, "lo": 4.0, "hi": 5.4, "unit": "10*6/uL"}, {"y": "12.08.2025", "v": 4.84, "lo": 4.0, "hi": 5.4, "unit": "10*6/uL"}, {"y": "18.03.2026", "v": 4.5, "disp": "4.5", "unit": "10*6/uL"}, {"y": "30.07.2026", "v": 4.68, "lo": 4.0, "hi": 5.4, "unit": "10*6/uL"}]}, "RDW": {"unit": "%", "pts": [{"y": "26.04.2023", "v": 12.8, "lo": 11.0, "hi": 16.0, "unit": "%"}, {"y": "14.08.2024", "v": 12.6, "lo": 10.0, "hi": 14.5, "unit": "%"}, {"y": "12.08.2025", "v": 12.5, "lo": 10.0, "hi": 14.5, "unit": "%"}, {"y": "18.03.2026", "v": 13.1, "disp": "13.1", "unit": "%"}, {"y": "30.07.2026", "v": 13.5, "lo": 10.0, "hi": 14.5, "unit": "%"}]}, "RDW-SD": {"unit": "fL", "pts": [{"y": "26.04.2023", "v": 34.9, "lo": 37.0, "hi": 54.0, "unit": "fl"}, {"y": "14.08.2024", "v": 36.0, "unit": "fL"}, {"y": "12.08.2025", "v": 37.4, "unit": "fL"}, {"y": "30.07.2026", "v": 41.1, "unit": "fL"}]}, "WBC": {"unit": "10*3/uL", "pts": [{"y": "26.04.2023", "v": 7.52, "lo": 4.0, "hi": 10.0, "unit": "10³/uL"}, {"y": "14.08.2024", "v": 6.24, "lo": 4.5, "hi": 13.5, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 6.79, "lo": 4.5, "hi": 13.5, "unit": "10*3/uL"}, {"y": "18.03.2026", "v": 7.4, "disp": "7.4", "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 4.9, "lo": 4.5, "hi": 13.5, "unit": "10*3/uL"}]}, "IG#": {"unit": "10*3/uL", "pts": [{"y": "14.08.2024", "v": 0.01, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 0.02, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 0.0, "unit": "10*3/uL"}]}, "IG%": {"unit": "%", "pts": [{"y": "14.08.2024", "v": 0.2, "unit": "%"}, {"y": "12.08.2025", "v": 0.3, "unit": "%"}, {"y": "30.07.2026", "v": 0.0, "unit": "%"}]}, "NRBC#": {"unit": "10*3/uL", "pts": [{"y": "14.08.2024", "v": 0.0, "unit": "10*3/uL"}, {"y": "12.08.2025", "v": 0.0, "unit": "10*3/uL"}, {"y": "30.07.2026", "v": 0.0, "unit": "10*3/uL"}]}, "NRBC%": {"unit": "/100WBC", "pts": [{"y": "14.08.2024", "v": 0.0, "unit": "/100WBC"}, {"y": "12.08.2025", "v": 0.0, "unit": "/100WBC"}, {"y": "30.07.2026", "v": 0.0, "unit": "/100WBC"}]}, "Retikülosit #": {"unit": "x10⁹/l", "pts": [{"y": "18.03.2026", "v": 70.0, "lo": 30.0, "hi": 85.0, "note": "Hollanda laboratuvarı, yeni test", "unit": "x10⁹/l"}]}}, "Karaciğer / Böbrek": {"ALT": {"unit": "U/L", "pts": [{"y": "26.04.2023", "v": 23.9, "lo": 0.0, "hi": 35.0, "unit": "U/L"}, {"y": "14.08.2024", "v": 27.0, "lo": 3.0, "hi": 33.0, "unit": "U/L"}, {"y": "12.08.2025", "v": 16.0, "lo": 3.0, "hi": 33.0, "unit": "U/L"}, {"y": "30.07.2026", "v": 17.0, "lo": 3.0, "hi": 33.0, "unit": "U/L"}]}, "AST": {"unit": "U/L", "pts": [{"y": "26.04.2023", "v": 29.3, "lo": 0.0, "hi": 32.0, "unit": "U/L"}, {"y": "14.08.2024", "v": 37.0, "lo": 5.0, "hi": 35.0, "unit": "U/L"}, {"y": "12.08.2025", "v": 23.0, "lo": 5.0, "hi": 35.0, "unit": "U/L"}, {"y": "30.07.2026", "v": 31.0, "lo": 5.0, "hi": 35.0, "unit": "U/L"}]}, "BUN": {"unit": "mg/dl", "pts": [{"y": "26.04.2023", "v": 9.91, "lo": 4.7, "hi": 23.3, "unit": "mg/dl"}]}, "Kreatinin": {"unit": "mg/dL", "pts": [{"y": "26.04.2023", "v": 0.376, "lo": 0.31, "hi": 0.47, "unit": "mg/dl"}, {"y": "14.08.2024", "v": 0.37, "lo": 0.32, "hi": 0.59, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 0.43, "lo": 0.4, "hi": 0.6, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 0.57, "lo": 0.4, "hi": 0.6, "unit": "mg/dL"}]}, "Üre": {"unit": "mg/dL", "pts": [{"y": "26.04.2023", "v": 21.2, "lo": 16.6, "hi": 48.5, "unit": "mg/dl"}, {"y": "14.08.2024", "v": 26.0, "lo": 16.6, "hi": 48.5, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 23.0, "lo": 16.6, "hi": 48.5, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 35.0, "lo": 16.6, "hi": 48.5, "unit": "mg/dL"}]}, "GGT": {"unit": "U/L", "pts": [{"y": "14.08.2024", "v": 9.0, "lo": 6.0, "hi": 42.0, "unit": "U/L"}]}, "LDH": {"unit": "U/L", "pts": [{"y": "14.08.2024", "v": 280.0, "lo": 120.0, "hi": 300.0, "unit": "U/L"}]}, "Potasyum (K)": {"unit": "mmol/L", "pts": [{"y": "14.08.2024", "v": 4.4, "lo": 3.5, "hi": 5.1, "unit": "mmol/L"}]}, "Sodyum (Na)": {"unit": "mmol/L", "pts": [{"y": "14.08.2024", "v": 140.0, "lo": 134.0, "hi": 146.0, "unit": "mmol/L"}]}, "Ürik Asit": {"unit": "mg/dL", "pts": [{"y": "14.08.2024", "v": 4.1, "lo": 2.4, "hi": 5.7, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 3.9, "lo": 2.4, "hi": 5.7, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 4.8, "lo": 2.4, "hi": 5.7, "unit": "mg/dL"}]}}, "Lipid / Metabolik": {"Glukoz (Açlık)": {"unit": "mg/dL", "pts": [{"y": "26.04.2023", "v": 85.4, "lo": 72.0, "hi": 106.0, "unit": "mg/dL"}, {"y": "14.08.2024", "v": 88.0, "lo": 74.0, "hi": 109.0, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 90.0, "lo": 74.0, "hi": 109.0, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 90.0, "lo": 74.0, "hi": 109.0, "unit": "mg/dL"}]}, "HDL": {"unit": "mg/dL", "pts": [{"y": "14.08.2024", "v": 55.9, "lo": 45.0, "hi": 100.0, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 57.6, "lo": 45.0, "hi": 100.0, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 54.0, "lo": 45.0, "hi": 100.0, "unit": "mg/dL"}]}, "İnsülin": {"unit": "mU/L", "pts": [{"y": "14.08.2024", "v": 4.41, "lo": 2.6, "hi": 24.9, "unit": "µU/mL"}, {"y": "12.08.2025", "v": 10.5, "lo": 2.6, "hi": 24.9, "unit": "mU/L"}]}, "Kolesterol": {"unit": "mg/dL", "pts": [{"y": "14.08.2024", "v": 116.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 109.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 105.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}]}, "LDL": {"unit": "mg/dl", "pts": [{"y": "14.08.2024", "v": 50.0, "lo": 30.0, "hi": 130.0, "unit": "mg/dl"}, {"y": "12.08.2025", "v": 38.0, "lo": 30.0, "hi": 130.0, "unit": "mg/dl"}, {"y": "30.07.2026", "v": 42.0, "lo": 30.0, "hi": 130.0, "unit": "mg/dl"}]}, "Trigliserid": {"unit": "mg/dL", "pts": [{"y": "14.08.2024", "v": 50.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}, {"y": "12.08.2025", "v": 69.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}, {"y": "30.07.2026", "v": 44.0, "lo": 30.0, "hi": 200.0, "unit": "mg/dL"}]}, "HbA1c": {"unit": "%", "pts": [{"y": "14.08.2024", "v": 4.9, "lo": 4.0, "hi": 6.0, "unit": "%"}, {"y": "12.08.2025", "v": 4.8, "lo": 4.0, "hi": 6.0, "unit": "%"}, {"y": "30.07.2026", "v": 5.1, "lo": 4.0, "hi": 6.0, "unit": "%"}]}, "HbA1c (mmol)": {"unit": "mmol/mol", "pts": [{"y": "14.08.2024", "v": 30.0, "lo": 20.0, "hi": 42.0, "unit": "mmol/L"}, {"y": "12.08.2025", "v": 28.8, "lo": 20.0, "hi": 42.0, "unit": "mmol/L"}, {"y": "30.07.2026", "v": 32.0, "lo": 20.0, "hi": 42.0, "unit": "mmol/mol"}]}}, "Tiroid": {"FT3": {"unit": "ng/L", "pts": [{"y": "12.08.2025", "v": 5.27, "lo": 2.408, "hi": 5.289, "unit": "ng/L"}]}, "FT4": {"unit": "ng/dL", "pts": [{"y": "12.08.2025", "v": 1.43, "lo": 0.93, "hi": 1.7, "unit": "ng/dL"}, {"y": "30.07.2026", "v": 1.42, "lo": 0.93, "hi": 1.7, "unit": "ng/dL"}]}, "TSH": {"unit": "mIU/L", "pts": [{"y": "12.08.2025", "v": 2.25, "lo": 0.27, "hi": 4.5, "unit": "mIU/L"}, {"y": "30.07.2026", "v": 2.5, "lo": 0.27, "hi": 4.5, "unit": "mIU/L"}]}, "Anti-TPO": {"unit": "IU/mL", "pts": [{"y": "30.07.2026", "v": 15.8, "lo": 0.0, "hi": 34.0, "unit": "IU/mL"}]}}, "Vitamin / Mineral": {"Vitamin D3": {"unit": "ng/mL", "pts": [{"y": "26.04.2023", "v": 19.8, "lo": 30.0, "hi": 80.0, "unit": "ng/mL"}, {"y": "18.03.2026", "v": 4.807692, "disp": "4.808", "note": "orijinal: 12 nmol/l", "unit": "ng/mL"}]}, "Ferritin": {"unit": "µg/L", "pts": [{"y": "26.04.2023", "v": 21.2, "lo": 30.0, "hi": 400.0, "unit": "ng/ml"}, {"y": "14.08.2024", "v": 16.7, "lo": 13.0, "hi": 150.0, "unit": "ng/mL"}, {"y": "12.08.2025", "v": 21.1, "lo": 13.0, "hi": 150.0, "unit": "µg/L"}, {"y": "18.03.2026", "v": 29.0, "disp": "29", "unit": "µg/L"}, {"y": "30.07.2026", "v": 16.3, "lo": 13.0, "hi": 150.0, "unit": "µg/L"}]}, "Vitamin B12": {"unit": "ng/L", "pts": [{"y": "26.04.2023", "v": 437.0, "lo": 191.0, "hi": 663.0, "unit": "pg/mL"}, {"y": "14.08.2024", "v": 314.0, "lo": 197.0, "hi": 771.0, "unit": "pg/mL"}, {"y": "12.08.2025", "v": 256.0, "lo": 197.0, "hi": 771.0, "unit": "ng/L"}, {"y": "30.07.2026", "v": 299.0, "lo": 197.0, "hi": 771.0, "unit": "ng/L"}]}, "Folat": {"unit": "µg/L", "pts": [{"y": "14.08.2024", "v": 10.6, "lo": 3.9, "hi": 26.8, "unit": "ng/mL"}, {"y": "30.07.2026", "v": 10.6, "lo": 3.9, "hi": 26.8, "unit": "µg/L"}]}, "Demir (Fe)": {"unit": "µg/dL", "pts": [{"y": "12.08.2025", "v": 58.0, "lo": 33.0, "hi": 193.0, "unit": "µg/dL"}, {"y": "18.03.2026", "v": 55.85, "disp": "55.85", "note": "orijinal: 10 µmol/l", "unit": "µg/dL"}, {"y": "30.07.2026", "v": 129.0, "lo": 33.0, "hi": 193.0, "unit": "µg/dL"}]}}, "Diğer": {"CRP": {"unit": "mg/L", "pts": [{"y": "26.04.2023", "v": 0.0365, "lo": 0.0, "hi": 0.5, "unit": "mg/dL"}, {"y": "14.08.2024", "v": 0.1, "lo": 0.0, "hi": 5.0, "unit": "mg/L"}, {"y": "18.03.2026", "v": 0.6, "disp": "<0.6", "unit": "mg/L"}]}, "Transferrin": {"unit": "µmol/l", "pts": [{"y": "18.03.2026", "v": 41.6, "lo": 24.0, "hi": 46.0, "note": "Hollanda laboratuvarı, yeni test", "unit": "µmol/l"}]}, "Transferrin Satürasyonu": {"unit": "%", "pts": [{"y": "18.03.2026", "v": 12.0, "lo": 15.0, "hi": 55.0, "note": "Hollanda laboratuvarı, yeni test", "unit": "%"}]}, "PT (Protrombin Zamanı)": {"unit": "s", "pts": [{"y": "18.03.2026", "v": 11.6, "lo": 10.0, "hi": 12.2, "note": "Hollanda laboratuvarı, yeni test", "unit": "s"}]}, "aPTT": {"unit": "s", "pts": [{"y": "18.03.2026", "v": 28.3, "lo": 23.3, "hi": 30.1, "note": "Hollanda laboratuvarı, yeni test", "unit": "s"}]}, "INR": {"unit": "", "pts": [{"y": "18.03.2026", "v": 1.1, "note": "Hollanda laboratuvarı, yeni test", "unit": ""}]}}}, "notes": ["MCH (Hollanda laboratuvarı, 18.03.2026): ham değer 1.726 amol (referans 1.5 - 2) — birim netliği olmadığı için diğer yıllarla birleştirilmedi, dönüştürülmeden not edildi.", "Diff.: sonuç iptal edildi / geçersiz (GEANNULEERD)"]}}
+;
+
+const TEST_INFO = {
+  "BASO#": "Bazofil sayısı. Bazofiller alerjik ve iltihabi reaksiyonlarda rol oynayan, kanda en az bulunan beyaz kan hücresi türüdür.",
+  "BASO%": "Beyaz kan hücreleri içinde bazofillerin oranı. Alerjik reaksiyonlarda yükselebilir.",
+  "EO#": "Eozinofil sayısı. Eozinofiller alerjik reaksiyonlarda ve parazit enfeksiyonlarında artan beyaz kan hücreleridir.",
+  "EO%": "Beyaz kan hücreleri içinde eozinofillerin oranı. Alerji ve parazit enfeksiyonlarında yükselebilir.",
+  "HCT": "Hematokrit: Kanın yüzde kaçının kırmızı kan hücrelerinden oluştuğunu gösterir. Düşüklüğü anemi, yüksekliği dehidratasyon veya polisitemi ile ilişkili olabilir.",
+  "HGB": "Hemoglobin: Alyuvarların içinde oksijeni dokulara taşıyan proteindir. Düşüklüğü anemi belirtisi olabilir, yüksekliği dehidratasyon veya kronik düşük oksijenle ilişkilendirilebilir.",
+  "LYMPH#": "Lenfosit sayısı. Lenfositler virüslerle savaşan ve bağışıklık hafızası oluşturan hücrelerdir.",
+  "LYMPH%": "Beyaz kan hücreleri içinde lenfositlerin oranı. Viral enfeksiyonlarda artabilir.",
+  "MCH": "Ortalama Eritrosit Hemoglobini: Bir alyuvardaki ortalama hemoglobin miktarıdır; MCV ile birlikte anemi tipini ayırt etmede kullanılır.",
+  "MCHC": "Ortalama Eritrosit Hemoglobin Konsantrasyonu: Alyuvar hacmine göre hemoglobin yoğunluğunu gösterir; demir eksikliği anemisinde düşük çıkabilir.",
+  "MCV": "Ortalama Eritrosit Hacmi: Tek bir alyuvarın ortalama büyüklüğüdür. Düşükse (mikrositer) demir eksikliği anemisi, yüksekse (makrositer) B12/folat eksikliği düşünülebilir.",
+  "MONO#": "Monosit sayısı. Monositler kronik enfeksiyon ve iltihapla mücadele eden beyaz kan hücreleridir.",
+  "MONO%": "Beyaz kan hücreleri içinde monositlerin oranı.",
+  "MPV": "Ortalama Trombosit Hacmi: Trombositlerin ortalama büyüklüğünü gösterir; kemik iliğinin trombosit üretim hızıyla ilişkilidir.",
+  "NEU#": "Nötrofil sayısı. Nötrofiller bakteriyel enfeksiyonlarla savaşan en yaygın beyaz kan hücresi türüdür; enfeksiyon veya iltihapta artabilir.",
+  "NEU%": "Beyaz kan hücreleri içinde nötrofillerin oranı.",
+  "PCT": "Plateletkrit: Kanın toplam hacmi içinde trombositlerin kapladığı oranı gösterir; trombosit sayısı ve büyüklüğünün birleşik bir göstergesidir.",
+  "PDW": "Trombosit Dağılım Genişliği: Trombositlerin boyut farklılığını gösterir; trombosit üretimindeki değişiklikleri yansıtabilir.",
+  "P-LCR": "Büyük Trombosit Oranı: 12 fL'den büyük, yani daha genç ve iri trombositlerin toplam trombositlere oranıdır; yüksekliği artmış trombosit üretimine işaret edebilir.",
+  "PLT": "Trombosit (Platelet) Sayısı: Kanamayı durdurmakla görevli hücrelerin sayısıdır. Düşüklüğü kanama riskini, yüksekliği pıhtı riskini artırabilir.",
+  "RBC": "Kırmızı Kan Hücresi (Eritrosit) Sayısı: Vücuda oksijen taşıyan alyuvarların sayısıdır. Düşüklüğü anemiyi, yüksekliği polisitemi veya dehidratasyonu düşündürebilir.",
+  "RDW": "Eritrosit Dağılım Genişliği: Kırmızı kan hücrelerinin boyut farklılığını gösterir. Yükselmesi, örneğin demir eksikliği anemisinde farklı büyüklükte alyuvarların bir arada bulunduğunu gösterebilir.",
+  "RDW-SD": "Eritrosit Dağılım Genişliği (Standart Sapma): RDW'nin farklı bir hesaplama yöntemiyle ifadesidir, alyuvar boyut farklılığını gösterir.",
+  "WBC": "Beyaz Kan Hücresi (Lökosit) Sayısı: Kandaki enfeksiyonlarla savaşan hücrelerin toplam sayısıdır. Yüksekliği enfeksiyon, iltihap veya stres; düşüklüğü bağışıklık baskılanması ya da kemik iliği sorunlarına işaret edebilir.",
+  "IG#": "İmmatür Granülosit sayısı: Kemik iliğinden henüz tam olgunlaşmadan kana karışan beyaz kan hücreleridir; enfeksiyon, iltihap veya kemik iliğinin yoğun uyarıldığı durumlarda yükselebilir.",
+  "IG%": "Beyaz kan hücreleri içinde immatür granülositlerin oranı.",
+  "NRBC#": "Çekirdekli (olgunlaşmamış) kırmızı kan hücresi sayısı: Normalde kanda bulunmaz; varlığı kemik iliğinin yoğun baskı altında olduğunu veya ciddi bir hastalığı işaret edebilir.",
+  "NRBC%": "100 beyaz kan hücresi başına düşen çekirdekli kırmızı kan hücresi oranı.",
+  "Retikülosit #": "Kemik iliğinin yeni ürettiği, henüz tam olgunlaşmamış genç alyuvarların sayısıdır. Kemik iliğinin alyuvar üretim hızını gösterir; anemi sonrası toparlanmayı değerlendirmede kullanılır.",
+  "ALT": "Karaciğer hücrelerinde bulunan bir enzimdir (Alanin Aminotransferaz). Karaciğer hasarında (yağlanma, hepatit, ilaç etkisi vb.) kana karışarak yükselir.",
+  "AST": "Karaciğer, kas ve kalp dokusunda bulunan bir enzimdir (Aspartat Aminotransferaz). ALT ile birlikte karaciğer hasarını değerlendirmede kullanılır, kas hasarında da yükselebilir.",
+  "BUN": "Kanda Üre Azotu: Protein metabolizmasının atık ürünüdür, böbrekler tarafından atılır. Yüksekliği böbrek fonksiyon bozukluğu veya dehidratasyonu gösterebilir. Üre testiyle aynı süreci farklı birimle ölçer.",
+  "Kreatinin": "Kas metabolizmasının atık ürünüdür ve böbrekler tarafından kandan süzülür. Yüksekliği böbrek fonksiyonlarının bozulduğuna işaret edebilir.",
+  "Üre": "Protein metabolizmasının atık ürünüdür, böbrekler tarafından kandan süzülüp atılır. Yüksekliği böbrek fonksiyon bozukluğunu veya dehidratasyonu gösterebilir.",
+  "Ürik Asit": "Pürin adı verilen maddelerin yıkım ürünüdür. Yüksekliği gut hastalığı ve böbrek taşı riskiyle ilişkilendirilir.",
+  "GGT": "Gama Glutamil Transferaz: Karaciğer ve safra yollarındaki hasarı gösteren bir enzimdir; alkol kullanımına da duyarlıdır.",
+  "LDH": "Laktat Dehidrojenaz: Birçok dokuda bulunan bir enzimdir; hücre hasarının genel bir göstergesidir. Karaciğer, kalp, kas veya kan hastalıklarında yükselebilir.",
+  "Potasyum (K)": "Kalp ve kas fonksiyonları için kritik bir elektrolittir. Hem yüksekliği hem düşüklüğü kalp ritim bozukluklarına yol açabilir.",
+  "Sodyum (Na)": "Vücuttaki sıvı dengesini ve sinir-kas fonksiyonlarını düzenleyen temel bir elektrolittir.",
+  "tGFH (eGFR)": "Tahmini Glomerüler Filtrasyon Hızı: Böbreklerin kanı süzme hızının kreatinin, yaş ve cinsiyete göre hesaplanan tahmini değeridir; böbrek fonksiyonunun en önemli göstergelerinden biridir. Genellikle 90 mL/dk/1.73m² üzeri sağlıklı kabul edilir.",
+  "Glukoz (Açlık)": "Açlık kan şekeri: Kandaki glikoz düzeyini gösterir; diyabet tarama ve takibinde kullanılan temel testtir.",
+  "Kolesterol": "Toplam Kolesterol: Kandaki HDL, LDL ve trigliseritlerin toplamından oluşan kolesterol miktarıdır; kalp-damar hastalığı riskini değerlendirmede kullanılır.",
+  "HDL": "'İyi kolesterol' olarak bilinir. Damarlardaki fazla kolesterolü karaciğere taşıyarak damar sertliğine karşı koruyucu etki gösterir; yüksek olması istenir.",
+  "LDL": "'Kötü kolesterol' olarak bilinir. Yüksek düzeyleri damar duvarında birikerek kalp-damar hastalığı riskini artırır.",
+  "Trigliserid": "Kandaki yağ (trigliserit) düzeyini gösterir. Yüksekliği kalp-damar hastalığı ve pankreas iltihabı riskiyle ilişkilidir.",
+  "HbA1c": "Glikozillenmiş hemoglobin: Son 2-3 aylık ortalama kan şekeri düzeyini yansıtır; diyabet tanı ve takibinde kullanılır.",
+  "HbA1c (mmol)": "HbA1c değerinin uluslararası (IFCC) birimle, mmol/mol cinsinden ifadesidir; HbA1c ile aynı ölçümün farklı bir birimidir.",
+  "İnsülin": "Pankreas tarafından üretilen ve kan şekerini düzenleyen hormondur. Yüksekliği insülin direnciyle ilişkilendirilebilir.",
+  "TSH": "Tiroid Uyarıcı Hormon: Hipofiz bezinin tiroid bezini uyarmak için salgıladığı hormondur; tiroid fonksiyonunu değerlendirmede ilk bakılan testtir. Yüksekliği hipotiroidiyi, düşüklüğü hipertiroidiyi düşündürebilir.",
+  "FT3": "Serbest Triiyodotironin: Tiroid bezinin ürettiği aktif hormonlardan biridir; vücudun metabolizma hızını etkiler.",
+  "FT4": "Serbest Tiroksin: Tiroid bezinin ürettiği ana hormondur; vücuttaki birçok metabolik süreci düzenler.",
+  "Anti-TPO": "Tiroid peroksidaz enzimine karşı bağışıklık sisteminin ürettiği bir antikordur. Yüksekliği Hashimoto veya Graves gibi otoimmün tiroid hastalıklarına işaret edebilir.",
+  "Vitamin D3": "Kemik sağlığı ve bağışıklık sistemi için önemli bir vitamindir; büyük ölçüde güneş ışığıyla üretilir. Düşüklüğü yaygındır ve kemik/kas ağrılarıyla ilişkilendirilebilir.",
+  "Ferritin": "Vücuttaki depo demir miktarını gösteren bir proteindir. Düşüklüğü demir eksikliğini, yüksekliği demir birikimini veya bir iltihabi süreci gösterebilir.",
+  "Vitamin B12": "Sinir sistemi ve kırmızı kan hücresi üretimi için gerekli bir vitamindir. Eksikliği anemi ve nörolojik belirtilere yol açabilir.",
+  "Folat": "Folik Asit: Hücre bölünmesi ve kırmızı kan hücresi üretimi için gerekli bir B vitaminidir; eksikliği anemiye yol açabilir.",
+  "Demir (Fe)": "Kanda dolaşan ve hemoglobin üretiminde kullanılan demir miktarını gösterir; ferritin ile birlikte demir eksikliği anemisi değerlendirmesinde kullanılır.",
+  "CRP": "C-Reaktif Protein: Vücuttaki iltihabın (enfeksiyon, doku hasarı, kronik hastalık) genel bir göstergesidir. Spesifik değildir ama yüksekliği aktif bir iltihabi süreci gösterir.",
+  "PSA (total)": "Prostat Spesifik Antijen: Prostat bezi tarafından üretilen bir proteindir; prostat büyümesi, iltihabı veya prostat kanseri taramasında kullanılır.",
+  "Transferrin": "Demiri kanda taşıyan proteindir. Demir eksikliğinde artabilir, kronik hastalık veya karaciğer sorunlarında azalabilir.",
+  "Transferrin Satürasyonu": "Transferrin proteininin ne kadarının demirle dolu olduğunu gösteren yüzdedir (Serum Demiri / Toplam Demir Bağlama Kapasitesi × 100); demir eksikliği veya fazlalığının değerlendirilmesinde kullanılır.",
+  "PT (Protrombin Zamanı)": "Kanın pıhtılaşma süresini ölçen bir testtir; karaciğer fonksiyonu ve kanama bozukluklarının değerlendirilmesinde, ayrıca kan sulandırıcı tedavinin izlenmesinde kullanılır.",
+  "aPTT": "Aktive Parsiyel Tromboplastin Zamanı: Kanın pıhtılaşma süresini farklı bir yoldan ölçen testtir; kanama bozuklukları ve heparin tedavisinin takibinde kullanılır.",
+  "INR": "Uluslararası Normalleştirilmiş Oran: PT sonucunun laboratuvarlar arası karşılaştırılabilir hale getirilmiş standart halidir; özellikle kan sulandırıcı (warfarin) tedavisi gören kişilerde takip amacıyla kullanılır."
+};
+
+// Klinik olarak birlikte değerlendirilen test grupları (kaynak: standart laboratuvar panel
+// tanımları - tam kan sayımı eritrosit indeksleri, lipid paneli, tiroid paneli, karaciğer
+// enzimleri, böbrek paneli, demir paneli, pıhtılaşma paneli, glukoz metabolizması, elektrolitler).
+const TEST_GROUPS = [
+  ['HGB', 'HCT', 'RBC', 'MCV', 'MCH', 'MCHC', 'RDW', 'RDW-SD'],
+  ['PLT', 'MPV', 'PDW', 'PCT', 'P-LCR'],
+  ['WBC', 'NEU#', 'LYMPH#', 'MONO#', 'EO#', 'BASO#', 'IG#', 'NRBC#'],
+  ['NEU%', 'LYMPH%', 'MONO%', 'EO%', 'BASO%', 'IG%', 'NRBC%'],
+  ['Kolesterol', 'HDL', 'LDL', 'Trigliserid'],
+  ['TSH', 'FT3', 'FT4', 'Anti-TPO'],
+  ['Ferritin', 'Demir (Fe)', 'Transferrin', 'Transferrin Satürasyonu'],
+  ['Vitamin B12', 'Folat'],
+  ['ALT', 'AST', 'GGT', 'LDH'],
+  ['Kreatinin', 'Üre', 'BUN', 'tGFH (eGFR)', 'Ürik Asit'],
+  ['PT (Protrombin Zamanı)', 'aPTT', 'INR'],
+  ['Glukoz (Açlık)', 'HbA1c', 'HbA1c (mmol)', 'İnsülin'],
+  ['Potasyum (K)', 'Sodyum (Na)'],
+];
+const RELATED = {};
+TEST_GROUPS.forEach(group => {
+  group.forEach(test => {
+    RELATED[test] = group.filter(t => t !== test);
+  });
+});
+function relatedFor(person, test) {
+  const related = RELATED[test] || [];
+  if (!related.length) return [];
+  const cats = DATA[person].categories;
+  const present = new Set();
+  for (const cat in cats) for (const t in cats[cat]) present.add(t);
+  return related.filter(t => present.has(t));
+}
+
+const state = { person: null, cat: 'ALL', cat_key: null, test_cat: null, test_name: null, chart: null };
+
+function fmtNum(v) {
+  if (v === null || v === undefined) return '';
+  if (Number.isInteger(v)) return String(v);
+  const r = Math.round(v * 10000) / 10000;
+  return String(r);
+}
+function isAbn(pt) {
+  return pt.lo != null && pt.hi != null && (pt.v < pt.lo || pt.v > pt.hi);
+}
+function dateKey(d) {
+  const [dd, mm, yyyy] = d.split('.');
+  return yyyy + mm + dd;
+}
+
+function personSelect() { return document.getElementById('personSelect'); }
+
+function initPersonSelect() {
+  const sel = personSelect();
+  sel.innerHTML = '';
+  Object.keys(DATA).forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p; opt.textContent = DATA[p].meta.name.split(' ')[0] || p;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', () => selectPerson(sel.value));
+}
+
+const PREFERRED_DEFAULT_TESTS = ['HGB', 'WBC', 'Glukoz (Açlık)', 'Kolesterol'];
+
+function pickDefaultTest(person) {
+  const cats = DATA[person].categories;
+  for (const pref of PREFERRED_DEFAULT_TESTS) {
+    for (const cat in cats) {
+      if (cats[cat][pref]) return { cat, test: pref };
+    }
+  }
+  for (const cat in cats) {
+    const tests = Object.keys(cats[cat]);
+    if (tests.length) return { cat, test: tests[0] };
+  }
+  return null;
+}
+
+function selectPerson(person) {
+  state.person = person;
+  state.cat = 'ALL';
+  const def = pickDefaultTest(person);
+  state.test_cat = def ? def.cat : null;
+  state.test_name = def ? def.test : null;
+  personSelect().value = person;
+  renderHeader();
+  renderTabs();
+  renderList();
+  renderCharts();
+}
+
+function renderHeader() {
+  const meta = DATA[state.person].meta;
+  document.getElementById('pageTitle').textContent = meta.name + ' — Kan Tahlili Paneli';
+  document.getElementById('pageSub').textContent = 'e-Nabız ve ek laboratuvar sonuçları, referans aralıklarıyla birlikte';
+
+  let total = 0, abn = 0;
+  const cats = DATA[state.person].categories;
+  for (const cat in cats) for (const test in cats[cat]) for (const pt of cats[cat][test].pts) {
+    total++;
+    if (isAbn(pt)) abn++;
+  }
+  const dates = meta.dates;
+  const period = dates.length ? (dates[0].split('.')[2] + '–' + dates[dates.length-1].split('.')[2]) : '-';
+  document.getElementById('statPeriod').textContent = period;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statAbn').textContent = abn;
+  document.getElementById('statLast').textContent = dates.length ? dates[dates.length-1] : '-';
+  document.getElementById('statsLine').textContent =
+    `${period} · ${total} test · ${abn} referans dışı · son tahlil ${dates.length ? dates[dates.length-1] : '-'}`;
+}
+
+function renderTabs() {
+  const tabsEl = document.getElementById('categoryTabs');
+  tabsEl.innerHTML = '';
+  const cats = DATA[state.person].categories;
+  const allBtn = document.createElement('button');
+  allBtn.textContent = 'Tümü'; allBtn.dataset.cat = 'ALL';
+  tabsEl.appendChild(allBtn);
+  for (const cat in cats) {
+    const b = document.createElement('button');
+    b.textContent = cat; b.dataset.cat = cat;
+    tabsEl.appendChild(b);
+  }
+  styleTabs();
+  tabsEl.addEventListener('click', (e) => {
+    if (e.target.tagName !== 'BUTTON') return;
+    state.cat = e.target.dataset.cat;
+    styleTabs();
+    renderList();
+  });
+}
+function styleTabs() {
+  document.querySelectorAll('#categoryTabs button').forEach(b => {
+    b.classList.toggle('active', b.dataset.cat === state.cat);
+  });
+}
+
+function latestPt(series) {
+  return series.pts[series.pts.length - 1];
+}
+function prevPt(series) {
+  return series.pts.length > 1 ? series.pts[series.pts.length - 2] : null;
+}
+function deltaArrow(latest, prev) {
+  if (!prev || typeof latest.v !== 'number' || typeof prev.v !== 'number') return '';
+  const diff = latest.v - prev.v;
+  if (Math.abs(diff) < 1e-9) return '·';
+  return diff > 0 ? '▲' : '▼';
+}
+
+function renderList() {
+  const listEl = document.getElementById('listScroll');
+  listEl.innerHTML = '';
+  const cats = DATA[state.person].categories;
+  const catNames = Object.keys(cats).filter(c => state.cat === 'ALL' || state.cat === c);
+
+  for (const cat of catNames) {
+    const h = document.createElement('div');
+    h.className = 'cat-heading';
+    h.textContent = cat;
+    listEl.appendChild(h);
+
+    for (const test in cats[cat]) {
+      const series = cats[cat][test];
+      const last = latestPt(series);
+      const prev = prevPt(series);
+      const row = document.createElement('div');
+      row.className = 'row';
+      if (state.test_cat === cat && state.test_name === test) row.classList.add('active');
+      if (state.test_name && test !== state.test_name && (RELATED[state.test_name] || []).includes(test)) {
+        row.classList.add('related');
+      }
+      row.dataset.cat = cat; row.dataset.test = test;
+
+      const left = document.createElement('div');
+      left.className = 'name-wrap';
+      const nameEl = document.createElement('div'); nameEl.className = 'name'; nameEl.textContent = test;
+      if (series.pts.some(p => isAbn(p))) {
+        const abnDot = document.createElement('span');
+        abnDot.className = 'history-abn-dot';
+        abnDot.title = 'Bu test bir veya daha fazla tarihte referans aralığının dışında sonuç verdi';
+        nameEl.appendChild(abnDot);
+      }
+      const refEl = document.createElement('div'); refEl.className = 'ref';
+      refEl.textContent = (last.lo != null) ? `${fmtNum(last.lo)} - ${fmtNum(last.hi)} ${series.unit}` : (series.unit || '');
+      left.appendChild(nameEl); left.appendChild(refEl);
+
+      const right = document.createElement('div'); right.className = 'valwrap';
+      const valEl = document.createElement('span'); valEl.className = 'val' + (isAbn(last) ? ' abn' : '');
+      valEl.textContent = (last.disp || fmtNum(last.v)) + ' ' + (last.unit || series.unit || '');
+      const deltaEl = document.createElement('span'); deltaEl.className = 'delta';
+      deltaEl.textContent = deltaArrow(last, prev);
+      right.appendChild(valEl); right.appendChild(deltaEl);
+
+      const infoBtn = document.createElement('button');
+      infoBtn.className = 'info-btn'; infoBtn.type = 'button';
+      infoBtn.textContent = '?';
+      infoBtn.setAttribute('aria-label', test + ' hakkında bilgi');
+      infoBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openInfoModal(cat, test, series, last);
+      });
+
+      row.appendChild(left); row.appendChild(right); row.appendChild(infoBtn);
+      row.addEventListener('click', () => {
+        state.test_cat = cat; state.test_name = test;
+        renderList();
+        renderCharts();
+      });
+      listEl.appendChild(row);
+    }
+  }
+
+  const notes = DATA[state.person].notes || [];
+  if (notes.length) {
+    const block = document.createElement('div');
+    block.className = 'notes-block';
+    const p = document.createElement('p'); p.textContent = 'Notlar';
+    const ul = document.createElement('ul');
+    notes.forEach(n => { const li = document.createElement('li'); li.textContent = n; ul.appendChild(li); });
+    block.appendChild(p); block.appendChild(ul);
+    listEl.appendChild(block);
+  }
+}
+
+function findSeries(person, testName) {
+  const cats = DATA[person].categories;
+  for (const cat in cats) {
+    if (cats[cat][testName]) return { cat, series: cats[cat][testName] };
+  }
+  return null;
+}
+
+function buildDatasetArrays(series, dates) {
+  let lastRef = null;
+  const loArr = [], hiArr = [], valArr = [], colors = [], labels = [];
+  const byDate = {}; series.pts.forEach(p => byDate[p.y] = p);
+  dates.forEach(d => {
+    const p = byDate[d];
+    if (p && p.lo != null) lastRef = { lo: p.lo, hi: p.hi };
+    loArr.push(lastRef ? lastRef.lo : null);
+    hiArr.push(lastRef ? lastRef.hi : null);
+    valArr.push(p ? p.v : null);
+    colors.push(p && isAbn(p) ? '#e34948' : '#2a78d6');
+    labels.push(p ? (p.disp || fmtNum(p.v)) : null);
+  });
+  return { byDate, loArr, hiArr, valArr, colors, labels };
+}
+
+// Draws the value as a static number above (or below, near the top edge) each point
+// on the "value" dataset (index 2) - no hover required.
+const valueLabelPlugin = {
+  id: 'valueLabels',
+  afterDatasetsDraw(chart) {
+    const meta = chart.getDatasetMeta(2);
+    if (!meta || meta.hidden) return;
+    const ds = chart.data.datasets[2];
+    const labels = ds.pointLabels || [];
+    const opts = (chart.options.plugins && chart.options.plugins.valueLabels) || {};
+    const fontSize = opts.fontSize || 13;
+    const offset = opts.offset || 12;
+    const { ctx, chartArea } = chart;
+    ctx.save();
+    ctx.font = `700 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+    ctx.textAlign = 'center';
+    meta.data.forEach((point, idx) => {
+      const label = labels[idx];
+      if (label == null || label === '') return;
+      const near_top = point.y - chartArea.top < offset + 8;
+      ctx.fillStyle = (ds.pointBackgroundColor && ds.pointBackgroundColor[idx]) || '#2a78d6';
+      ctx.textBaseline = near_top ? 'top' : 'bottom';
+      ctx.fillText(label, point.x, near_top ? point.y + offset : point.y - offset);
+    });
+    ctx.restore();
+  }
+};
+
+function renderCharts() {
+  if (!state.test_name) return;
+  document.getElementById('metricTitle').textContent = state.test_name;
+
+  const relatedTests = relatedFor(state.person, state.test_name);
+  document.getElementById('metricSub').textContent = relatedTests.length
+    ? `${state.test_cat} · ${relatedTests.length} ilişkili test birlikte gösteriliyor`
+    : state.test_cat;
+
+  const listEl = document.getElementById('chartList');
+  listEl.innerHTML = '';
+  if (state.charts) state.charts.forEach(c => c.destroy());
+  state.charts = [];
+
+  const items = [{ test: state.test_name, primary: true }]
+    .concat(relatedTests.map(t => ({ test: t, primary: false })));
+  const dates = DATA[state.person].meta.dates;
+  const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const relatedGrid = document.createElement('div');
+  relatedGrid.className = 'related-grid';
+
+  items.forEach((item, idx) => {
+    const found = findSeries(state.person, item.test);
+    if (!found) return;
+    const series = found.series;
+    const { byDate, loArr, hiArr, valArr, colors, labels } = buildDatasetArrays(series, dates);
+
+    const card = document.createElement('div');
+    card.className = 'chart-item' + (item.primary ? ' primary' : '');
+
+    const head = document.createElement('div'); head.className = 'chart-item-head';
+    const titleEl = document.createElement('p'); titleEl.className = 'chart-item-title';
+    titleEl.textContent = item.test;
+    if (!item.primary) {
+      const dot = document.createElement('span'); dot.className = 'related-dot'; dot.textContent = '• ilişkili';
+      titleEl.appendChild(dot);
+    }
+    const chartInfoBtn = document.createElement('button');
+    chartInfoBtn.className = 'info-btn'; chartInfoBtn.type = 'button';
+    chartInfoBtn.textContent = '?';
+    chartInfoBtn.setAttribute('aria-label', item.test + ' hakkında bilgi');
+    chartInfoBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openInfoModal(found.cat, item.test, series, latestPt(series));
+    });
+    head.appendChild(titleEl);
+    head.appendChild(chartInfoBtn);
+    card.appendChild(head);
+
+    const canvasWrap = document.createElement('div'); canvasWrap.className = 'chart-item-canvas-wrap';
+    const canvas = document.createElement('canvas');
+    canvasWrap.appendChild(canvas);
+    card.appendChild(canvasWrap);
+
+    const allVals = [...loArr, ...hiArr, ...valArr].filter(v => v != null);
+    let yMin, yMax;
+    if (allVals.length) {
+      const dataMin = Math.min(...allVals);
+      const dataMax = Math.max(...allVals);
+      const span = dataMax - dataMin;
+      const pad = span > 0 ? span * 0.10 : (Math.abs(dataMax) || 1) * 0.10;
+      yMin = dataMin - pad;
+      yMax = dataMax + pad;
+    }
+
+    const chart = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [
+          { label: '', data: loArr, borderColor: isDark ? '#5b5a54' : '#a6a49c', borderWidth: 1,
+            borderDash: [4, 4], pointRadius: 0, fill: false, spanGaps: true },
+          { label: 'Referans Aralığı', data: hiArr, borderColor: isDark ? '#5b5a54' : '#a6a49c', borderWidth: 1,
+            borderDash: [4, 4], pointRadius: 0, fill: '-1',
+            backgroundColor: isDark ? 'rgba(195,194,183,0.15)' : 'rgba(137,135,129,0.18)', spanGaps: true },
+          { label: item.test, data: valArr, borderColor: '#2a78d6', borderWidth: 2, spanGaps: true,
+            pointBackgroundColor: colors, pointBorderColor: colors, pointRadius: 5, pointHoverRadius: 5,
+            pointLabels: labels }
+        ]
+      },
+      plugins: [valueLabelPlugin],
+      options: {
+        responsive: true, maintainAspectRatio: false, events: [],
+        layout: { padding: { top: item.primary ? 22 : 16, bottom: 2 } },
+        plugins: {
+          valueLabels: item.primary ? { fontSize: 13, offset: 12 } : { fontSize: 8, offset: 6 },
+          legend: {
+            display: idx === 0, position: 'top', align: 'end',
+            labels: { filter: (li) => li.text !== '', color: '#898781', boxWidth: 14, font: { size: 12.5 } }
+          },
+          tooltip: { enabled: false }
+        },
+        scales: {
+          y: { min: yMin, max: yMax, grid: { color: isDark ? '#2c2c2a' : '#e1e0d9' }, ticks: { color: '#898781', font: { size: item.primary ? 12 : 9.5 } } },
+          x: { grid: { display: false }, ticks: {
+            color: '#898781', maxRotation: item.primary ? 45 : 0, minRotation: 0,
+            font: { size: item.primary ? 11.5 : 9 },
+            callback: (value, i) => {
+              const label = dates[i];
+              if (!label) return '';
+              return item.primary ? label : label.split('.')[2];
+            }
+          } }
+        }
+      }
+    });
+    state.charts.push(chart);
+
+    const last = latestPt(series);
+    const missing = dates.filter(d => !byDate[d]);
+    let cap = last.lo != null
+      ? `Referans: ${fmtNum(last.lo)} - ${fmtNum(last.hi)} ${last.unit || series.unit} (en güncel).`
+      : `Referans aralığı bilinmiyor.`;
+    if (missing.length) cap += ' Veri yok: ' + missing.join(', ') + '.';
+    const captionEl = document.createElement('p'); captionEl.className = 'chart-item-caption';
+    captionEl.textContent = cap;
+    card.appendChild(captionEl);
+
+    const notedPts = series.pts.filter(p => p.note);
+    if (notedPts.length) {
+      const noteEl = document.createElement('p'); noteEl.className = 'chart-item-note';
+      noteEl.textContent = notedPts.map(p => `${p.y}: ${p.note}`).join(' ');
+      card.appendChild(noteEl);
+    }
+
+    if (item.primary) {
+      listEl.appendChild(card);
+    } else {
+      relatedGrid.appendChild(card);
+    }
+  });
+
+  if (relatedGrid.children.length) {
+    listEl.appendChild(relatedGrid);
+  }
+}
+
+function openInfoModal(cat, test, series, last) {
+  document.getElementById('infoTitle').textContent = test;
+  document.getElementById('infoCat').textContent = cat;
+  document.getElementById('infoDesc').textContent =
+    TEST_INFO[test] || 'Bu test için henüz bir açıklama eklenmedi.';
+
+  const relatedEl = document.getElementById('infoRelated');
+  const related = relatedFor(state.person, test);
+  if (related.length) {
+    relatedEl.textContent = `İlişkili testler: ${related.join(', ')}. Bu testler genellikle birlikte değerlendirilir; ` +
+      `bu testi seçtiğinizde listede işaretlenir ve grafik alanında alt alta gösterilirler.`;
+    relatedEl.style.display = '';
+  } else {
+    relatedEl.style.display = 'none';
+  }
+
+  const refEl = document.getElementById('infoRef');
+  if (last && last.lo != null) {
+    refEl.textContent = `Bu rapordaki referans aralığı: ${fmtNum(last.lo)} - ${fmtNum(last.hi)} ${last.unit || series.unit}`;
+    refEl.style.display = '';
+  } else {
+    refEl.textContent = 'Bu test için referans aralığı raporda belirtilmemiş.';
+    refEl.style.display = '';
+  }
+  document.getElementById('infoOverlay').classList.add('open');
+}
+function closeInfoModal() {
+  document.getElementById('infoOverlay').classList.remove('open');
+}
+document.getElementById('infoClose').addEventListener('click', closeInfoModal);
+document.getElementById('infoOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'infoOverlay') closeInfoModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeInfoModal();
+});
+
+initPersonSelect();
+selectPerson(Object.keys(DATA)[0]);
+</script>
+</body>
+</html>
