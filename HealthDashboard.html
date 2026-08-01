@@ -631,7 +631,7 @@ function renderCharts() {
     const last = latestPt(series);
     const missing = dates.filter(d => !byDate[d]);
     let cap = last.lo != null
-      ? `Referans: ${fmtNum(last.lo)} - ${fmtNum(last.hi)} ${last.unit || series.unit} (en güncel).`
+      ? `Referans: ${fmtNum(last.lo)} - ${fmtNum(last.hi)} ${last.unit || series.unit}.`
       : `Referans aralığı bilinmiyor.`;
     if (missing.length) cap += ' Veri yok: ' + missing.join(', ') + '.';
     const captionEl = document.createElement('p'); captionEl.className = 'chart-item-caption';
