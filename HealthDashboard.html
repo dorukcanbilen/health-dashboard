@@ -125,6 +125,9 @@
   .modal-card .modal-cat { font-size: 11.5px; color: var(--text-muted); margin: 0 0 10px; }
   .modal-card p { font-size: 13.5px; color: var(--text-primary); margin: 0 0 10px; line-height: 1.55; }
   .modal-card .modal-ref { font-size: 12.5px; color: var(--text-secondary); background: var(--surface-0); border-radius: 8px; padding: 8px 10px; margin: 0 0 10px; }
+  .modal-tips { background: var(--bg-accent); border-radius: 8px; padding: 8px 10px; margin: 0 0 10px; }
+  .modal-tips-title { font-size: 12px; font-weight: 600; color: var(--text-accent); margin: 0 0 4px; }
+  .modal-tips #infoTips { margin: 0; font-size: 12.5px; color: var(--text-primary); }
   .modal-close {
     display: block; margin-left: auto; font-size: 13px; border-radius: 999px;
     border: 0.5px solid var(--border-strong); background: var(--surface-0); color: var(--text-primary);
@@ -190,6 +193,10 @@
     <p id="infoDesc"></p>
     <p class="modal-ref" id="infoRelated" style="display:none;"></p>
     <div class="modal-ref" id="infoRef"></div>
+    <div class="modal-tips" id="infoTipsBlock" style="display:none;">
+      <p class="modal-tips-title">Nelere dikkat etmeli?</p>
+      <p id="infoTips"></p>
+    </div>
     <button class="modal-close" id="infoClose">Kapat</button>
   </div>
 </div>
@@ -264,6 +271,76 @@ const TEST_INFO = {
   "PT (Protrombin Zamanı)": "Kanın pıhtılaşma süresini ölçen bir testtir; karaciğer fonksiyonu ve kanama bozukluklarının değerlendirilmesinde, ayrıca kan sulandırıcı tedavinin izlenmesinde kullanılır.",
   "aPTT": "Aktive Parsiyel Tromboplastin Zamanı: Kanın pıhtılaşma süresini farklı bir yoldan ölçen testtir; kanama bozuklukları ve heparin tedavisinin takibinde kullanılır.",
   "INR": "Uluslararası Normalleştirilmiş Oran: PT sonucunun laboratuvarlar arası karşılaştırılabilir hale getirilmiş standart halidir; özellikle kan sulandırıcı (warfarin) tedavisi gören kişilerde takip amacıyla kullanılır."
+};
+
+// "Nelere dikkat etmeli" ipuçları — genel sağlık/beslenme bilgisi amaçlıdır, tıbbi tavsiye
+// yerine geçmez. İnternetteki güvenilir sağlık kaynaklarından (hastane sağlık rehberleri,
+// diyetisyen/uzman makaleleri) derlenmiştir.
+const TEST_TIPS = {
+  "BASO#": "Bazofil yüksekliği genellikle altta yatan alerjik reaksiyon veya kronik iltihapla ilişkilidir; bilinen bir alerjiniz varsa tetikleyicilerden kaçınmak ve alerji tedavisini düzenli sürdürmek değerin normale dönmesine yardımcı olabilir.",
+  "BASO%": "Bazofil oranı genellikle altta yatan alerjik reaksiyon veya kronik iltihapla ilişkilidir; bilinen bir alerjiniz varsa tetikleyicilerden kaçınmak ve alerji tedavisini düzenli sürdürmek değerin normale dönmesine yardımcı olabilir.",
+  "EO#": "Eozinofil yüksekliği genellikle alerji (astım, egzama, alerjik rinit) veya parazit enfeksiyonuyla ilişkilidir; altta yatan alerjik durumun kontrol altına alınması ve gerekiyorsa parazitolojik değerlendirme değerin normale dönmesine katkı sağlar.",
+  "EO%": "Eozinofil oranı genellikle alerji veya parazit enfeksiyonuyla ilişkilidir; altta yatan alerjik durumun kontrol altına alınması ve gerekiyorsa parazitolojik değerlendirme değerin normale dönmesine katkı sağlar.",
+  "HCT": "Demir, B12 ve folat açısından zengin beslenme (kırmızı et, karaciğer, yumurta, yeşil yapraklı sebzeler, baklagiller) ve C vitamini ile demir emiliminin desteklenmesi bu değerin iyileşmesine katkı sağlayabilir. Düşüklüğün altta yatan nedeni (kanama, beslenme eksikliği, kronik hastalık) mutlaka araştırılmalıdır; kendi kendine demir takviyesi almak yerine doktor kontrolünde tedavi önerilir.",
+  "HGB": "Demir, B12 ve folat açısından zengin beslenme (kırmızı et, karaciğer, yumurta, yeşil yapraklı sebzeler, baklagiller) ve C vitamini ile demir emiliminin desteklenmesi (yemekle birlikte narenciye/biber tüketimi) bu değerin iyileşmesine katkı sağlayabilir. Düşüklüğün altta yatan nedeni mutlaka araştırılmalıdır; kendi kendine demir takviyesi almak yerine doktor kontrolünde tedavi önerilir.",
+  "LYMPH#": "Lenfosit sayısı genellikle viral enfeksiyonlarla geçici olarak yükselir ve enfeksiyon geçtikçe normale döner; düzenli uyku, dengeli beslenme ve stres yönetimi bağışıklık sisteminin toparlanmasını destekler.",
+  "LYMPH%": "Lenfosit oranı genellikle viral enfeksiyonlarla geçici olarak yükselir ve enfeksiyon geçtikçe normale döner; düzenli uyku, dengeli beslenme ve stres yönetimi bağışıklık sisteminin toparlanmasını destekler.",
+  "MCH": "Bu değer doğrudan yaşam tarzıyla değil demir, B12 ve folat düzeyleriyle ilişkilidir; anemi ile birlikte düşük veya yüksek çıkıyorsa altta yatan eksikliğin (demir, B12/folat) beslenme ve gerekirse takviyeyle giderilmesi MCH'nin de normale dönmesine yardımcı olur.",
+  "MCHC": "Bu değer doğrudan yaşam tarzıyla değil demir düzeyi ve alyuvar yapısıyla ilişkilidir; demir eksikliği anemisinde düşük çıkması sık görülür — demirden zengin beslenme ve C vitaminiyle emilimin desteklenmesi katkı sağlayabilir, ancak altta yatan neden doktor tarafından değerlendirilmelidir.",
+  "MCV": "Bu değer alyuvar boyutunu yansıtır; düşükse (mikrositer) demirden zengin beslenme, yüksekse (makrositer) B12/folattan zengin beslenme (et, yumurta, süt ürünleri, yeşil yapraklı sebzeler) faydalı olabilir. Altta yatan neden mutlaka araştırılmalıdır.",
+  "MONO#": "Monosit yüksekliği kronik enfeksiyon veya iltihaba işaret edebilir; altta yatan iltihabi durumun tedavi edilmesi ve genel bağışıklık sağlığının (dengeli beslenme, yeterli uyku, düzenli egzersiz) desteklenmesi önerilir.",
+  "MONO%": "Monosit oranı kronik enfeksiyon veya iltihaba işaret edebilir; altta yatan iltihabi durumun tedavi edilmesi ve genel bağışıklık sağlığının desteklenmesi önerilir.",
+  "MPV": "Trombosit indekslerini desteklemek için yeşil yapraklı sebzelerden gelen K vitamini ve antioksidan açısından zengin meyveler (yaban mersini, çilek) faydalı olabilir. Belirgin sapmalar kemik iliği veya pıhtılaşma sorununa işaret edebileceğinden doktor değerlendirmesi gerekir.",
+  "NEU#": "Nötrofil yüksekliği genellikle bakteriyel enfeksiyon veya iltihaba bağlıdır ve altta yatan enfeksiyon tedavi edildikçe normale döner; sigara kullanımı da nötrofil sayısını artırabileceğinden bırakılması önerilir.",
+  "NEU%": "Nötrofil oranı genellikle bakteriyel enfeksiyon veya iltihaba bağlıdır ve altta yatan enfeksiyon tedavi edildikçe normale döner; sigara kullanımının bırakılması önerilir.",
+  "PCT": "Trombosit sayısı ve büyüklüğünün birleşik göstergesidir; K vitamini içeren yeşil yapraklı sebzeler ve antioksidan açısından zengin meyveler faydalı olabilir. Belirgin sapmalar için doktor değerlendirmesi gerekir.",
+  "PDW": "Trombosit üretimindeki değişiklikleri yansıtır; dengeli beslenme dışında doğrudan yaşam tarzıyla düzeltilebilecek bir değer değildir, belirgin sapmalarda doktor değerlendirmesi önerilir.",
+  "P-LCR": "Büyük trombosit oranı artmış trombosit üretimine işaret edebilir; dengeli beslenme dışında doğrudan yaşam tarzıyla düzeltilebilecek bir değer değildir, belirgin sapmalarda doktor değerlendirmesi önerilir.",
+  "PLT": "Trombosit sayısını desteklemek için K vitamini içeren yeşil yapraklı sebzeler ve antioksidan açısından zengin meyveler (yaban mersini, çilek) faydalı olabilir. Belirgin düşüklük veya yükseklik kemik iliği ya da otoimmün bir soruna işaret edebileceğinden mutlaka doktor değerlendirmesi gerekir.",
+  "RBC": "Demir, B12 ve folat açısından zengin beslenme ve yeterli hidrasyon bu değerin dengelenmesine katkı sağlayabilir. Düşüklüğün (anemi) veya yüksekliğin (dehidratasyon, polisitemi) altta yatan nedeni mutlaka araştırılmalıdır.",
+  "RDW": "Alyuvar boyut farklılığını yansıtır; demir, B12 veya folat eksikliğiyle ilişkiliyse bu eksikliklerin beslenme ve gerekirse takviyeyle giderilmesi değerin normale dönmesine katkı sağlar.",
+  "RDW-SD": "RDW ile aynı bilgiyi farklı bir hesaplamayla verir; demir, B12 veya folat eksikliğiyle ilişkiliyse bu eksikliklerin giderilmesi değerin normale dönmesine katkı sağlar.",
+  "WBC": "Beyaz küre sayısı vücuttaki bir enfeksiyon, iltihap veya strese tepki olarak değişir; dengeli beslenme, yeterli uyku, düzenli egzersiz ve sigaradan uzak durmak bağışıklık sisteminin sağlıklı çalışmasını destekler. Belirgin yükseklik veya düşüklükte mutlaka doktor değerlendirmesi gerekir.",
+  "IG#": "Kemik iliğinin yoğun uyarıldığı akut enfeksiyon veya iltihabi durumlarda yükselir; yaşam tarzıyla doğrudan düzeltilebilecek bir değer değildir, belirgin varlığında altta yatan nedenin araştırılması için doktor değerlendirmesi gerekir.",
+  "IG%": "Kemik iliğinin yoğun uyarıldığı akut enfeksiyon veya iltihabi durumlarda yükselir; belirgin varlığında altta yatan nedenin araştırılması için doktor değerlendirmesi gerekir.",
+  "NRBC#": "Normalde kanda bulunmaz; varlığı kemik iliğinin yoğun baskı altında olduğunu gösterebileceğinden mutlaka doktor değerlendirmesi gerektirir, yaşam tarzıyla ilişkili bir gösterge değildir.",
+  "NRBC%": "Normalde kanda bulunmaz; varlığında altta yatan nedenin araştırılması için doktor değerlendirmesi gerekir.",
+  "Retikülosit #": "Demir, B12 ve folat eksikliklerinin tedavisi sonrası yükselerek kemik iliğinin toparlandığını gösterir; bu vitamin/mineralleri içeren dengeli beslenme kemik iliği fonksiyonunu destekler.",
+  "ALT": "Karaciğer enzimlerini düşürmek için alkol tüketiminin tamamen bırakılması (alkol bırakıldığında ALT/AST dört haftada yarıya inebilir), fazla kiloların verilmesi (vücut ağırlığının %7-10'unun kaybı karaciğer yağlanmasını belirgin azaltır), Akdeniz tipi beslenme (sebze, balık, zeytinyağı) ve işlenmiş/yağlı gıdalardan kaçınmak etkilidir. Doktor onayı olmadan gereksiz ilaç/takviye kullanımından kaçınılmalıdır.",
+  "AST": "Karaciğer enzimlerini düşürmek için alkolün tamamen bırakılması, fazla kiloların verilmesi, Akdeniz tipi beslenme ve işlenmiş/yağlı gıdalardan kaçınmak etkilidir. Kas kaynaklı yükselmelerde ağır egzersiz sonrası geçici artış olabilir; doktor onayı olmadan gereksiz ilaç kullanımından kaçınılmalıdır.",
+  "BUN": "Böbrek fonksiyonlarını desteklemek için günde 2-3 litre su tüketmek, aşırı protein/kırmızı et tüketiminden kaçınmak ve yeterli hidrasyonu korumak önemlidir; yükseklik dehidratasyonla da ilişkili olabilir.",
+  "Kreatinin": "Böbrek fonksiyonlarını desteklemek için günde 2-3 litre su tüketmek, aşırı kırmızı et ve protein tüketiminden kaçınmak, tuz alımını azaltmak ve tansiyon/şeker gibi altta yatan durumları kontrol altında tutmak önemlidir. Doktor onayı olmadan ağrı kesici (özellikle NSAID grubu) kullanımından kaçınılmalıdır.",
+  "Üre": "Böbrek fonksiyonlarını desteklemek için yeterli su tüketimi, aşırı protein alımından kaçınma ve dehidratasyondan korunma önemlidir; yükseklik protein ağırlıklı beslenme veya sıvı kaybıyla da ilişkili olabilir.",
+  "Ürik Asit": "Pürin açısından zengin besinlerden (sakatat, kırmızı et, kabuklu deniz ürünleri, bira, hamsi/sardalye gibi bazı balıklar) kaçınmak, şekerli içecekleri sınırlamak, bol su tüketmek ve düşük yağlı süt ürünlerini tercih etmek ürik asit düzeyini düşürmeye yardımcı olabilir.",
+  "GGT": "Karaciğer ve safra yolu sağlığını desteklemek için alkol tüketiminin bırakılması veya sınırlandırılması en etkili adımdır; Akdeniz tipi beslenme ve düzenli egzersiz de destekleyicidir.",
+  "LDH": "Bu enzim birçok dokuda bulunduğundan yükselmesi genel bir hücre hasarı göstergesidir; spesifik bir yaşam tarzı önerisinden çok altta yatan nedenin (karaciğer, kalp, kas, kan) doktor tarafından araştırılması gerekir.",
+  "Potasyum (K)": "Elektrolit dengesi için işlenmiş gıdaları azaltmak, taze sebze-meyve tüketimini artırmak önemlidir; belirgin yükseklik veya düşüklük böbrek fonksiyonu ya da ilaç kullanımıyla ilişkili olabileceğinden mutlaka doktor değerlendirmesi gerektirir, kendi kendine mineral takviyesi alınmamalıdır.",
+  "Sodyum (Na)": "Sıvı ve elektrolit dengesi için yeterli su tüketimi ve dengeli tuz alımı önemlidir; belirgin yükseklik veya düşüklük sıvı kaybı, aşırı su tüketimi veya böbrek/hormon sorunlarıyla ilişkili olabileceğinden mutlaka doktor değerlendirmesi gerektirir.",
+  "tGFH (eGFR)": "Böbrek fonksiyonunu desteklemek için günde 2-3 litre su tüketmek, aşırı protein/tuz alımından kaçınmak, tansiyon ve kan şekerini kontrol altında tutmak ve doktor onayı olmadan ağrı kesici kullanmamak önemlidir.",
+  "Glukoz (Açlık)": "Kan şekerini iyileştirmek için düşük glisemik indeksli besinler (tam tahıl, sebze, baklagil), düzenli egzersiz (haftada en az 150 dakika) ve fazla kiloların verilmesi (vücut ağırlığının %5-7'si) etkilidir; şeker ve rafine karbonhidrat tüketimi sınırlandırılmalıdır.",
+  "Kolesterol": "Lipid profilini iyileştirmek için doymuş/trans yağdan fakir, lifli ve zeytinyağı/omega-3 ağırlıklı (Akdeniz tipi) beslenme, düzenli egzersiz, kilo kontrolü, sigaradan uzak durma ve şeker tüketiminin azaltılması önerilir.",
+  "HDL": "HDL'yi (iyi kolesterol) yükseltmek için düzenli aerobik egzersiz (haftada en az 150 dakika tempolu yürüyüş, koşu, yüzme, bisiklet), sağlıklı yağlar (zeytinyağı, omega-3 içeren balık) ve sigarayı bırakmak etkilidir.",
+  "LDL": "LDL'yi (kötü kolesterol) düşürmek için doymuş/trans yağdan fakir, lifli bir diyet, düzenli egzersiz, kilo kontrolü ve sigaradan uzak durmak önerilir.",
+  "Trigliserid": "Trigliseridi düşürmek için şeker ve rafine karbonhidrat tüketiminin azaltılması, düzenli egzersiz, kilo kontrolü ve alkol tüketiminin sınırlandırılması etkilidir.",
+  "HbA1c": "Son 2-3 aylık ortalama kan şekerini yansıtır; düşük glisemik indeksli beslenme, düzenli egzersiz (haftada 150 dakika orta yoğunlukta aktivite HbA1c'yi %0.5-0.7 düşürebilir) ve vücut ağırlığının %5-7'sinin verilmesi belirgin katkı sağlar.",
+  "HbA1c (mmol)": "HbA1c ile aynı ölçümün farklı birimidir; düşük glisemik indeksli beslenme, düzenli egzersiz ve kilo kontrolü değerin iyileşmesine katkı sağlar.",
+  "İnsülin": "İnsülin direncini azaltmak için düşük glisemik indeksli beslenme, düzenli egzersiz (özellikle direnç/ağırlık antrenmanı kas kütlesini artırarak insülin duyarlılığını iyileştirir) ve kilo kontrolü etkilidir.",
+  "TSH": "Tiroid sağlığını desteklemek için dengeli, iyot içeren besinler (deniz ürünleri; hipertiroidide iyot kısıtlaması gerekebilir), omega-3 kaynakları, düzenli uyku ve stres yönetimi faydalı olabilir. Tiroid hormonları hassas bir dengeye sahip olduğundan tedavi ve doz ayarlaması mutlaka doktor kontrolünde yapılmalıdır.",
+  "FT3": "Tiroid hormon düzeyleri büyük ölçüde tiroid bezinin kendisi veya tedaviyle ilgilidir; dengeli beslenme ve stres yönetimi destekleyici olabilir ama doz/tedavi mutlaka doktor kontrolünde ayarlanmalıdır.",
+  "FT4": "Tiroid hormon düzeyleri büyük ölçüde tiroid bezinin kendisi veya tedaviyle ilgilidir; dengeli beslenme ve stres yönetimi destekleyici olabilir ama doz/tedavi mutlaka doktor kontrolünde ayarlanmalıdır.",
+  "Anti-TPO": "Bu antikor düzeyi otoimmün süreçle ilişkilidir ve doğrudan beslenmeyle değiştirilemez; genel iltihap karşıtı (Akdeniz tipi) beslenme ve stres yönetimi destekleyici olabilir, takip ve tedavi doktor kontrolünde yapılmalıdır.",
+  "Vitamin D3": "Öğlen saatlerinde günde 10-15 dakika güneşlenmek, yağlı balık/yumurta sarısı gibi D vitamini içeren besinleri tüketmek ve gerekiyorsa doktor önerisiyle D vitamini takviyesi almak düzeyin yükselmesine yardımcı olur; takviyenin yağ içeren bir öğünle alınması emilimini artırır.",
+  "Ferritin": "Demir depolarını desteklemek için kırmızı et, karaciğer, yumurta, yeşil yapraklı sebze ve baklagil tüketimi, C vitaminiyle demir emiliminin artırılması önerilir; çay/kahvenin demirli öğünlerden ayrı tüketilmesi emilimi kolaylaştırır. Demir eksikliğinin altta yatan nedeni araştırılmalı, takviye doktor kontrolünde kullanılmalıdır.",
+  "Vitamin B12": "B12 için hayvansal gıdalar (et, yumurta, süt ürünleri) tüketilmelidir; özellikle vejetaryen/vegan beslenenlerde takviye gerekebilir, bu doktor kontrolünde planlanmalıdır.",
+  "Folat": "Folat için yeşil yapraklı sebzeler, baklagiller ve tam tahıllar tüketilmelidir; eksiklik saptandığında takviye doktor kontrolünde kullanılmalıdır.",
+  "Demir (Fe)": "Kırmızı et, karaciğer, yumurta, yeşil yapraklı sebze ve baklagil tüketimi, C vitaminiyle demir emiliminin artırılması önerilir; çay/kahvenin demirli öğünlerden ayrı tüketilmesi emilimi kolaylaştırır.",
+  "CRP": "İltihabı azaltmak için Akdeniz tipi beslenme (sebze, meyve, balık, zeytinyağı), düzenli egzersiz, sigara ve aşırı alkolden kaçınma, kaliteli uyku ve stres yönetimi önerilir; CRP spesifik olmadığından yükseklik altta yatan bir enfeksiyon/iltihabi durumun araştırılmasını gerektirir.",
+  "PSA (total)": "Sağlıklı beslenme, düzenli egzersiz, sigara ve aşırı alkolden kaçınmak genel prostat sağlığını destekler; ancak PSA yüksekliği prostatit, iyi huylu büyüme veya başka nedenlerle de ortaya çıkabileceğinden mutlaka doktor tarafından değerlendirilmelidir.",
+  "Transferrin": "Demir taşıma proteinidir; demir eksikliğinde yükselebilir. Demirden zengin beslenme ve altta yatan nedenin (kronik hastalık, karaciğer sorunu) araştırılması önemlidir.",
+  "Transferrin Satürasyonu": "Demir eksikliği veya fazlalığının değerlendirilmesinde kullanılır; demirden zengin beslenme ve C vitaminiyle emilimin desteklenmesi düşüklüğe katkı sağlayabilir, altta yatan neden doktor tarafından değerlendirilmelidir.",
+  "PT (Protrombin Zamanı)": "Bu değer büyük ölçüde karaciğer fonksiyonu, K vitamini düzeyi ve kullanılan kan sulandırıcı ilaçlara bağlıdır; kan sulandırıcı kullanan kişilerde K vitamini içeren besinlerin (yeşil yapraklı sebzeler) tüketim miktarının gün gün tutarlı tutulması önemlidir. Doz ve tedavi mutlaka doktor kontrolünde ayarlanmalıdır.",
+  "aPTT": "Bu değer pıhtılaşma faktörleri ve kullanılan kan sulandırıcı ilaçlarla (örn. heparin) ilişkilidir; tedavi ve doz ayarlaması mutlaka doktor kontrolünde yapılmalıdır.",
+  "INR": "Özellikle warfarin tedavisi görenlerde K vitamini içeren besinlerin (yeşil yapraklı sebzeler) tüketiminin gün gün tutarlı tutulması değerin stabil kalmasına yardımcı olur; doz ayarlaması mutlaka doktor kontrolünde yapılmalıdır."
 };
 
 // Klinik olarak birlikte değerlendirilen test grupları (kaynak: standart laboratuvar panel
@@ -690,6 +767,16 @@ function openInfoModal(cat, test, series, last) {
     refEl.textContent = 'Bu test için referans aralığı raporda belirtilmemiş.';
     refEl.style.display = '';
   }
+
+  const tipsBlock = document.getElementById('infoTipsBlock');
+  const tip = TEST_TIPS[test];
+  if (tip) {
+    document.getElementById('infoTips').textContent = tip;
+    tipsBlock.style.display = '';
+  } else {
+    tipsBlock.style.display = 'none';
+  }
+
   document.getElementById('infoOverlay').classList.add('open');
 }
 function closeInfoModal() {
